@@ -5,7 +5,19 @@
 This repo contains an experiment to create a basic example app using the [ARCS](https://github.com/Michael-F-Bryan/arcs) crate
 running on the web.
 
-To begin with, [wasm-pack-template](https://rustwasm.github.io/docs/book/game-of-life/hello-world.html) was use to make a starter rust-webassembly app and then ARCS was added in.
+To begin with, [wasm-pack-template](https://rustwasm.github.io/docs/book/game-of-life/hello-world.html) was used to make a starter rust-webassembly app and then ARCS was added in.
+
+## Setup
+
+There are 2 requirements: wasm-pack and npm. Make sure you have them installed.
+
+### wasm-pack
+
+[Get wasm-pack here!](https://rustwasm.github.io/wasm-pack/installer/)
+
+### npm
+
+[Follow these instructions to install npm.](https://www.npmjs.com/get-npm)
 
 ## Usage
 
