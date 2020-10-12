@@ -1,5 +1,5 @@
 use wasm_bindgen::prelude::*;
-use web_sys::{HtmlCanvasElement, HtmlElement, KeyboardEvent, MouseEvent};
+use web_sys::{HtmlCanvasElement, HtmlElement, MouseEvent};
 
 use arcs::{
     euclid::{Point2D, Size2D},
@@ -9,90 +9,50 @@ use arcs::{
 };
 use log::Level;
 
-use keyboard_event_args::{KeyboardEventArgs, VirtualKeyCode};
 use seed::{prelude::*, *};
 
-// use modes::{
-//     ApplicationContext, Idle, KeyboardEventArgs, MouseButtons, MouseEventArgs, State, Transition,
-//     VirtualKeyCode,
-// };
 use crate::model::Model;
 use std::convert::TryFrom;
 
 mod keyboard_event_args;
-pub mod model;
+mod model;
 mod modes;
-// use modes::*;
-// pub mod modes;
+mod msg;
 mod utils;
 
 const CANVAS_ID: &str = "canvas";
 
-// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
-// allocator.
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-#[wasm_bindgen]
-extern "C" {
-    fn alert(s: &str);
-
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
-
 /////////////////////////////////////////////////////////////////////////////////////////
 ///
-///
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Msg {
-    Rendered,
-    MouseDown(Point2D<f64, CanvasSpace>),
-    MouseUp(Point2D<f64, CanvasSpace>),
-    MouseMove(Point2D<f64, CanvasSpace>),
-    KeyPressed(KeyboardEventArgs),
-    WindowResized,
+#[wasm_bindgen(start)]
+pub fn render() {
+    console_log::init_with_level(Level::Debug).expect("Unable to initialize the log");
+    log::debug!("render called");
+
+    seed::App::builder(update, view)
+        .after_mount(after_mount)
+        .window_events(window_events)
+        .build_and_start();
 }
 
-impl Msg {
-    pub fn from_key_press(ev: KeyboardEvent) -> Self {
-        let key = match ev.key().parse::<VirtualKeyCode>() {
-            Ok(got) => Some(got),
-            Err(_) => {
-                // encountered an unknown key code, log it so we can update the
-                // FromStr impl
-                log::warn!("Encountered an unknown key: {}", ev.key());
-                None
-            }
-        };
-
-        Msg::KeyPressed(KeyboardEventArgs {
-            shift_pressed: ev.shift_key(),
-            control_pressed: ev.ctrl_key(),
-            key,
-        })
-    }
-}
-
-fn after_mount(_: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
+fn after_mount(_: Url, orders: &mut impl Orders<msg::Msg>) -> AfterMount<Model> {
     orders
-        .after_next_render(|_| Msg::Rendered)
-        .after_next_render(|_| Msg::WindowResized);
+        .after_next_render(|_| msg::Msg::Rendered)
+        .after_next_render(|_| msg::Msg::WindowResized);
 
     AfterMount::new(Model::default())
 }
 
-fn update(msg: Msg, model: &mut Model, _orders: &mut impl Orders<Msg>) {
+fn update(msg: msg::Msg, model: &mut Model, _orders: &mut impl Orders<msg::Msg>) {
     log::trace!("Handling {:?}", msg);
 
     let needs_render = match msg {
-        Msg::Rendered => true,
-        Msg::MouseDown(cursor) => model.on_mouse_down(cursor),
-        Msg::MouseUp(cursor) => model.on_mouse_up(cursor),
-        Msg::MouseMove(cursor) => model.on_mouse_move(cursor),
-        Msg::KeyPressed(args) => model.on_key_pressed(args),
-        Msg::WindowResized => {
+        msg::Msg::Rendered => true,
+        msg::Msg::MouseDown(cursor) => model.on_mouse_down(cursor),
+        msg::Msg::MouseUp(cursor) => model.on_mouse_up(cursor),
+        msg::Msg::MouseMove(cursor) => model.on_mouse_move(cursor),
+        msg::Msg::KeyPressed(args) => model.on_key_pressed(args),
+        msg::Msg::WindowResized => {
             if let Some(parent_size) =
                 seed::canvas(CANVAS_ID).and_then(|canvas| parent_size(&canvas))
             {
@@ -133,14 +93,7 @@ fn parent_size(element: &HtmlElement) -> Option<Size2D<f64, CanvasSpace>> {
     ))
 }
 
-fn canvas_location(ev: MouseEvent) -> Point2D<f64, CanvasSpace> {
-    let x = ev.offset_x().into();
-    let y = ev.offset_y().into();
-
-    Point2D::new(x, y)
-}
-
-fn view(model: &Model) -> impl View<Msg> {
+fn view(model: &Model) -> impl View<msg::Msg> {
     log::debug!("view called");
 
     div![div![
@@ -158,25 +111,34 @@ fn view(model: &Model) -> impl View<Msg> {
                 At::Height => model.canvas_size.height,
                 At::TabIndex => "1",
             ],
-            mouse_ev(Ev::MouseDown, |e| Msg::MouseDown(canvas_location(e))),
-            mouse_ev(Ev::MouseUp, |e| Msg::MouseUp(canvas_location(e))),
-            mouse_ev(Ev::MouseMove, |e| Msg::MouseMove(canvas_location(e))),
-            keyboard_ev(Ev::KeyDown, Msg::from_key_press)
+            mouse_ev(Ev::MouseDown, |e| msg::Msg::MouseDown(canvas_location(e))),
+            mouse_ev(Ev::MouseUp, |e| msg::Msg::MouseUp(canvas_location(e))),
+            mouse_ev(Ev::MouseMove, |e| msg::Msg::MouseMove(canvas_location(e))),
+            keyboard_ev(Ev::KeyDown, msg::Msg::from_key_press)
         ],
     ]]
 }
 
-pub fn window_events(_model: &Model) -> Vec<Listener<Msg>> {
-    vec![simple_ev(Ev::Resize, Msg::WindowResized)]
+fn canvas_location(ev: MouseEvent) -> Point2D<f64, CanvasSpace> {
+    let x = ev.offset_x().into();
+    let y = ev.offset_y().into();
+
+    Point2D::new(x, y)
 }
 
-#[wasm_bindgen(start)]
-pub fn render() {
-    console_log::init_with_level(Level::Debug).expect("Unable to initialize the log");
-    log::debug!("render called");
+fn window_events(_model: &Model) -> Vec<Listener<msg::Msg>> {
+    vec![simple_ev(Ev::Resize, msg::Msg::WindowResized)]
+}
 
-    seed::App::builder(update, view)
-        .after_mount(after_mount)
-        .window_events(window_events)
-        .build_and_start();
+///////////////////////////////////////////////////////////////////////////////////
+/// // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
+// allocator.
+#[cfg(feature = "wee_alloc")]
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
 }
