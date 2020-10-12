@@ -1,23 +1,16 @@
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
-use web_sys::{console, window, HtmlCanvasElement, HtmlElement, KeyboardEvent, MouseEvent};
+use web_sys::{HtmlCanvasElement, HtmlElement, KeyboardEvent, MouseEvent};
 
 use arcs::{
-    components::{
-        Dimension, DrawingObject, Geometry, Layer, LineStyle, Name, PointStyle, Viewport,
-    },
-    euclid::{Point2D, Scale, Size2D},
-    piet::Color,
+    euclid::{Point2D, Size2D},
     piet_web::WebRenderContext,
     specs::prelude::*,
-    window::Window,
-    CanvasSpace, Length, Line, Point,
+    CanvasSpace,
 };
 use log::Level;
 
 use keyboard_event_args::{KeyboardEventArgs, VirtualKeyCode};
 use seed::{prelude::*, *};
-use std::f64::consts::PI;
 
 // use modes::{
 //     ApplicationContext, Idle, KeyboardEventArgs, MouseButtons, MouseEventArgs, State, Transition,
@@ -118,7 +111,7 @@ fn update(msg: Msg, model: &mut Model, _orders: &mut impl Orders<Msg>) {
     }
 }
 fn draw(canvas: &HtmlCanvasElement, model: &mut Model) {
-    let mut canvas_ctx = seed::canvas_context_2d(&canvas);
+    let canvas_ctx = seed::canvas_context_2d(&canvas);
     let browser_window = seed::window();
     let ctx = WebRenderContext::new(canvas_ctx, browser_window);
 

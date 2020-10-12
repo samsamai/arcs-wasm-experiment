@@ -1,14 +1,13 @@
 use arcs::{
-  components::{Dimension, DrawingObject, Geometry, Layer, LineStyle, Name, PointStyle, Viewport},
-  euclid::{Point2D, Scale, Size2D},
+  components::{Dimension, Layer, Name, PointStyle},
+  euclid::{Point2D, Size2D},
   piet::Color,
-  piet_web::WebRenderContext,
   specs::prelude::*,
   window::Window,
-  CanvasSpace, Length, Line, Point,
+  CanvasSpace,
 };
 
-use super::keyboard_event_args::{KeyboardEventArgs, VirtualKeyCode};
+use super::keyboard_event_args::KeyboardEventArgs;
 
 use super::modes::{ApplicationContext, Idle, MouseButtons, MouseEventArgs, State, Transition};
 
