@@ -15,16 +15,22 @@ use arcs::{
 };
 use log::Level;
 
+use keyboard_event_args::{KeyboardEventArgs, VirtualKeyCode};
 use seed::{prelude::*, *};
 use std::f64::consts::PI;
 
-use modes::{
-    ApplicationContext, Idle, KeyboardEventArgs, MouseButtons, MouseEventArgs, State, Transition,
-    VirtualKeyCode,
-};
+// use modes::{
+//     ApplicationContext, Idle, KeyboardEventArgs, MouseButtons, MouseEventArgs, State, Transition,
+//     VirtualKeyCode,
+// };
+use crate::model::Model;
 use std::convert::TryFrom;
 
-pub mod modes;
+mod keyboard_event_args;
+pub mod model;
+mod modes;
+// use modes::*;
+// pub mod modes;
 mod utils;
 
 const CANVAS_ID: &str = "canvas";
@@ -73,243 +79,6 @@ impl Msg {
             control_pressed: ev.ctrl_key(),
             key,
         })
-    }
-}
-/////////////////////////////////////////////////////////////////////////////////////////
-
-#[wasm_bindgen]
-pub fn run() {
-    #[cfg(feature = "console_error_panic_hook")]
-    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-
-    env_logger::init();
-
-    // Create a world and add some items to it
-    let mut world = World::new();
-
-    // make sure we register all components
-    arcs::components::register(&mut world);
-
-    let layer = Layer::create(
-        world.create_entity(),
-        Name::new("default"),
-        Layer {
-            z_level: 0,
-            visible: true,
-        },
-    );
-
-    // add a green dot to the world
-    world
-        .create_entity()
-        .with(DrawingObject {
-            geometry: Geometry::Point(Point::new(20.0, 0.0)),
-            layer,
-        })
-        .with(PointStyle {
-            radius: Dimension::Pixels(50.0),
-            colour: Color::rgb8(0x00, 0xff, 0),
-        })
-        .build();
-    world
-        .create_entity()
-        .with(DrawingObject {
-            geometry: Geometry::Point(Point::new(-20.0, 0.0)),
-            layer,
-        })
-        .with(PointStyle {
-            radius: Dimension::Pixels(50.0),
-            colour: Color::rgb8(0x00, 0x00, 0xff),
-        })
-        .build();
-    // and a red hexagon
-    let angles = (0..7).map(|i| i as f64 * 2.0 * PI / 6.0);
-    let radius = 50.0;
-    for (start_angle, end_angle) in angles.clone().zip(angles.clone().skip(1)) {
-        let start = Point::new(radius * start_angle.cos(), radius * start_angle.sin());
-        let end = Point::new(radius * end_angle.cos(), radius * end_angle.sin());
-
-        world
-            .create_entity()
-            .with(DrawingObject {
-                geometry: Geometry::Line(Line::new(start, end)),
-                layer,
-            })
-            .with(LineStyle {
-                width: Dimension::DrawingUnits(Length::new(5.0)),
-                stroke: Color::rgb8(0xff, 0, 0),
-            })
-            .build();
-    }
-
-    // now we've added some objects to the world we can start rendering
-    let arcs_window = Window::create(&mut world);
-
-    // set the viewport and background colour
-    *arcs_window.viewport_mut(&mut world.write_storage()) = Viewport {
-        centre: Point::zero(),
-        pixels_per_drawing_unit: Scale::new(5.0),
-    };
-    arcs_window
-        .style_mut(&mut world.write_storage())
-        .background_colour = Color::WHITE;
-
-    let browser_window = window().unwrap();
-
-    let canvas_element = browser_window
-        .document()
-        .unwrap()
-        .get_element_by_id("canvas")
-        .expect("Canvas element not found");
-
-    let canvas = canvas_element.dyn_into::<HtmlCanvasElement>().unwrap();
-    let context = canvas
-        .get_context("2d")
-        .unwrap()
-        .unwrap()
-        .dyn_into::<web_sys::CanvasRenderingContext2d>()
-        .unwrap();
-
-    let dpr = browser_window.device_pixel_ratio();
-    canvas.set_width((canvas.offset_width() as f64 * dpr) as u32);
-    canvas.set_height((canvas.offset_height() as f64 * dpr) as u32);
-    let _ = context.scale(dpr, dpr);
-
-    let w = canvas.offset_width() as f64;
-    let h = canvas.offset_height() as f64;
-    console::log_2(&w.into(), &h.into());
-
-    let arcs_context = WebRenderContext::new(context, browser_window);
-
-    let mut system = arcs_window.render_system(arcs_context, Size2D::new(w, h));
-    RunNow::setup(&mut system, &mut world);
-    RunNow::run_now(&mut system, &world);
-}
-pub struct Model {
-    world: World,
-    window: Window,
-    default_layer: Entity,
-    canvas_size: Size2D<f64, CanvasSpace>,
-    current_state: Box<dyn State>,
-}
-
-impl Default for Model {
-    fn default() -> Model {
-        let mut world = World::new();
-        arcs::components::register(&mut world);
-        let builder = world.create_entity().with(PointStyle {
-            radius: Dimension::Pixels(10.0),
-            ..Default::default()
-        });
-        let default_layer = Layer::create(builder, Name::new("default"), Layer::default());
-
-        let window = Window::create(&mut world);
-        window
-            .style_mut(&mut world.write_storage())
-            .background_colour = Color::rgb8(0xff, 0xcc, 0xcb);
-
-        Model {
-            world,
-            window,
-            default_layer,
-            canvas_size: Size2D::new(300.0, 150.0),
-            current_state: Box::new(Idle::default()),
-        }
-    }
-}
-
-impl Model {
-    fn handle_event<F>(&mut self, handler: F) -> bool
-    where
-        F: FnOnce(&mut dyn State, &mut Context<'_>) -> Transition,
-    {
-        let mut suppress_redraw = false;
-        let transition = handler(
-            &mut *self.current_state,
-            &mut Context {
-                world: &mut self.world,
-                window: &mut self.window,
-                default_layer: self.default_layer,
-                suppress_redraw: &mut suppress_redraw,
-            },
-        );
-        self.handle_transition(transition);
-        !suppress_redraw
-    }
-
-    fn on_mouse_down(&mut self, cursor: Point2D<f64, CanvasSpace>) -> bool {
-        let args = self.mouse_event_args(cursor);
-        log::debug!("[ON_MOUSE_DOWN] {:?}, {:?}", args, self.current_state);
-        self.handle_event(|state, ctx| state.on_mouse_down(ctx, &args))
-    }
-
-    fn on_mouse_up(&mut self, cursor: Point2D<f64, CanvasSpace>) -> bool {
-        let args = self.mouse_event_args(cursor);
-        log::debug!("[ON_MOUSE_UP] {:?}, {:?}", args, self.current_state);
-        self.handle_event(|state, ctx| state.on_mouse_up(ctx, &args))
-    }
-
-    fn on_mouse_move(&mut self, cursor: Point2D<f64, CanvasSpace>) -> bool {
-        let args = self.mouse_event_args(cursor);
-        self.handle_event(|state, ctx| state.on_mouse_move(ctx, &args))
-    }
-
-    fn on_key_pressed(&mut self, args: KeyboardEventArgs) -> bool {
-        log::debug!("[ON_KEY_PRESSED] {:?}, {:?}", args, self.current_state);
-        self.handle_event(|state, ctx| state.on_key_pressed(ctx, &args))
-    }
-
-    fn handle_transition(&mut self, transition: Transition) {
-        match transition {
-            Transition::ChangeState(new_state) => {
-                log::debug!("Changing state {:?} => {:?}", self.current_state, new_state);
-                self.current_state = new_state
-            }
-            Transition::DoNothing => {}
-        }
-    }
-
-    fn mouse_event_args(&self, cursor: Point2D<f64, CanvasSpace>) -> MouseEventArgs {
-        let viewports = self.world.read_storage();
-        let viewport = self.window.viewport(&viewports);
-        let location = arcs::window::to_drawing_coordinates(cursor, viewport, self.canvas_size);
-
-        MouseEventArgs {
-            location,
-            cursor,
-            button_state: MouseButtons::LEFT_BUTTON,
-        }
-    }
-}
-
-/// A temporary struct which presents a "view" of [`Model`] which can be used
-/// as a [`ApplicationContext`].
-struct Context<'model> {
-    world: &'model mut World,
-    window: &'model mut Window,
-    default_layer: Entity,
-    suppress_redraw: &'model mut bool,
-}
-
-impl<'model> ApplicationContext for Context<'model> {
-    fn world(&self) -> &World {
-        &self.world
-    }
-
-    fn world_mut(&mut self) -> &mut World {
-        &mut self.world
-    }
-
-    fn viewport(&self) -> Entity {
-        self.window.0
-    }
-
-    fn default_layer(&self) -> Entity {
-        self.default_layer
-    }
-
-    fn suppress_redraw(&mut self) {
-        *self.suppress_redraw = true;
     }
 }
 
