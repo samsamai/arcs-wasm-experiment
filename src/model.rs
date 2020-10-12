@@ -8,6 +8,7 @@ use arcs::{
 };
 
 use super::keyboard_event_args::KeyboardEventArgs;
+use super::msg::ButtonType;
 
 use super::modes::{ApplicationContext, Idle, MouseButtons, MouseEventArgs, State, Transition};
 
@@ -83,6 +84,11 @@ impl Model {
   pub fn on_key_pressed(&mut self, args: KeyboardEventArgs) -> bool {
     log::debug!("[ON_KEY_PRESSED] {:?}, {:?}", args, self.current_state);
     self.handle_event(|state, ctx| state.on_key_pressed(ctx, &args))
+  }
+
+  pub fn on_button_clicked(&mut self, args: ButtonType) -> bool {
+    log::debug!("[ON_BUTTON_CLICKED] {:?}, {:?}", args, self.current_state);
+    self.handle_event(|state, ctx| state.on_button_clicked(ctx, &args))
   }
 
   fn handle_transition(&mut self, transition: Transition) {

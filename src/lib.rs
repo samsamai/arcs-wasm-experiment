@@ -12,6 +12,7 @@ use log::Level;
 use seed::{prelude::*, *};
 
 use crate::model::Model;
+use msg::ButtonType;
 use std::convert::TryFrom;
 
 mod keyboard_event_args;
@@ -52,6 +53,7 @@ fn update(msg: msg::Msg, model: &mut Model, _orders: &mut impl Orders<msg::Msg>)
         msg::Msg::MouseUp(cursor) => model.on_mouse_up(cursor),
         msg::Msg::MouseMove(cursor) => model.on_mouse_move(cursor),
         msg::Msg::KeyPressed(args) => model.on_key_pressed(args),
+        msg::Msg::ButtonClicked(args) => model.on_button_clicked(args),
         msg::Msg::WindowResized => {
             if let Some(parent_size) =
                 seed::canvas(CANVAS_ID).and_then(|canvas| parent_size(&canvas))
@@ -93,30 +95,47 @@ fn parent_size(element: &HtmlElement) -> Option<Size2D<f64, CanvasSpace>> {
     ))
 }
 
-fn view(model: &Model) -> impl View<msg::Msg> {
-    log::debug!("view called");
-
-    div![div![
-        attrs![ At::Class => "canvas-container" ],
-        style! {
-            St::Width => "100%",
-            St::Height => "100%",
-            St::OverflowY => "hidden",
-            St::OverflowX => "hidden",
-        },
-        canvas![
-            attrs![
-                At::Id => CANVAS_ID,
-                At::Width => model.canvas_size.width,
-                At::Height => model.canvas_size.height,
-                At::TabIndex => "1",
-            ],
-            mouse_ev(Ev::MouseDown, |e| msg::Msg::MouseDown(canvas_location(e))),
-            mouse_ev(Ev::MouseUp, |e| msg::Msg::MouseUp(canvas_location(e))),
-            mouse_ev(Ev::MouseMove, |e| msg::Msg::MouseMove(canvas_location(e))),
-            keyboard_ev(Ev::KeyDown, msg::Msg::from_key_press)
+fn view(model: &Model) -> Node<msg::Msg> {
+    div![
+        div![
+            attrs![At::Id => "Toolbar"],
+            style! {
+                St::Width => "100%",
+                St::Height => "30px"
+            },
+            div![
+                style! {
+                    St::MarginLeft => "50%"
+                    St::MarginRight => "50%"
+                },
+                button![
+                    "Click Me!",
+                    ev(Ev::Click, |_| msg::Msg::ButtonClicked(ButtonType::Point)),
+                ],
+            ]
         ],
-    ]]
+        div![
+            attrs![ At::Class => "canvas-container" ],
+            style! {
+                St::Width => "100%",
+                St::Height => "100%",
+                St::OverflowY => "hidden",
+                St::OverflowX => "hidden",
+            },
+            canvas![
+                attrs![
+                    At::Id => CANVAS_ID,
+                    At::Width => model.canvas_size.width,
+                    At::Height => model.canvas_size.height,
+                    At::TabIndex => "1",
+                ],
+                mouse_ev(Ev::MouseDown, |e| msg::Msg::MouseDown(canvas_location(e))),
+                mouse_ev(Ev::MouseUp, |e| msg::Msg::MouseUp(canvas_location(e))),
+                mouse_ev(Ev::MouseMove, |e| msg::Msg::MouseMove(canvas_location(e))),
+                keyboard_ev(Ev::KeyDown, msg::Msg::from_key_press)
+            ],
+        ]
+    ]
 }
 
 fn canvas_location(ev: MouseEvent) -> Point2D<f64, CanvasSpace> {
@@ -126,7 +145,7 @@ fn canvas_location(ev: MouseEvent) -> Point2D<f64, CanvasSpace> {
     Point2D::new(x, y)
 }
 
-fn window_events(_model: &Model) -> Vec<Listener<msg::Msg>> {
+fn window_events(_model: &Model) -> Vec<EventHandler<msg::Msg>> {
     vec![simple_ev(Ev::Resize, msg::Msg::WindowResized)]
 }
 

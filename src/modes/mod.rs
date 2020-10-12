@@ -9,6 +9,7 @@ pub use add_point_mode::AddPointMode;
 pub use idle::Idle;
 
 use super::keyboard_event_args::{KeyboardEventArgs, VirtualKeyCode};
+use super::msg::ButtonType;
 
 use arcs::{
     algorithms::Translate,
@@ -162,6 +163,15 @@ pub trait State: Debug + AsAny {
         &mut self,
         _ctx: &mut dyn ApplicationContext,
         _event_args: &KeyboardEventArgs,
+    ) -> Transition {
+        Transition::DoNothing
+    }
+
+    /// A ui button was clicked
+    fn on_button_clicked(
+        &mut self,
+        _ctx: &mut dyn ApplicationContext,
+        _event_args: &ButtonType,
     ) -> Transition {
         Transition::DoNothing
     }
