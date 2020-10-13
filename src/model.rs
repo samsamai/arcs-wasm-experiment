@@ -25,7 +25,7 @@ impl Default for Model {
     let mut world = World::new();
     arcs::components::register(&mut world);
     let builder = world.create_entity().with(PointStyle {
-      radius: Dimension::Pixels(10.0),
+      radius: Dimension::Pixels(3.0),
       ..Default::default()
     });
     let default_layer = Layer::create(builder, Name::new("default"), Layer::default());
