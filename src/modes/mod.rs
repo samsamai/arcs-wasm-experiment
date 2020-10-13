@@ -1,6 +1,6 @@
 mod add_arc_mode;
-mod add_line_mode;
-mod add_point_mode;
+pub mod add_line_mode;
+pub mod add_point_mode;
 mod idle;
 
 pub use add_arc_mode::AddArcMode;

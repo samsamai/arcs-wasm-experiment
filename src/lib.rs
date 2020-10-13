@@ -97,21 +97,51 @@ fn parent_size(element: &HtmlElement) -> Option<Size2D<f64, CanvasSpace>> {
 
 fn view(model: &Model) -> Node<msg::Msg> {
     div![
-        div![
-            attrs![At::Id => "Toolbar"],
-            style! {
-                St::Width => "100%",
-                St::Height => "30px"
-            },
+        nav![
+            C!["tools level"],
             div![
-                style! {
-                    St::MarginLeft => "50%"
-                    St::MarginRight => "50%"
-                },
-                button![
-                    "Click Me!",
-                    ev(Ev::Click, |_| msg::Msg::ButtonClicked(ButtonType::Point)),
-                ],
+                C!["level-item has-text-centered"],
+                div![
+                    C!["field has-addons"],
+                    p![
+                        C!["control"],
+                        button![
+                            C![format!(
+                                "button is-light{}",
+                                if (*model.current_state)
+                                    .as_any()
+                                    .is::<modes::add_point_mode::AddPointMode>()
+                                {
+                                    " is-inverted is-active"
+                                } else {
+                                    ""
+                                }
+                            ),],
+                            span![C!["icon is-small"], i![C!["fas fa-plus"]]],
+                            span!["Point"],
+                            ev(Ev::Click, |_| msg::Msg::ButtonClicked(ButtonType::Point)),
+                        ]
+                    ],
+                    p![
+                        C!["control"],
+                        button![
+                            C![format!(
+                                "button is-light{}",
+                                if (*model.current_state)
+                                    .as_any()
+                                    .is::<modes::add_line_mode::AddLineMode>()
+                                {
+                                    " is-inverted is-active"
+                                } else {
+                                    ""
+                                }
+                            ),],
+                            span![C!["icon is-small"], i![C!["fas fa-pen-fancy"]]],
+                            span!["Line"],
+                            ev(Ev::Click, |_| msg::Msg::ButtonClicked(ButtonType::Line)),
+                        ]
+                    ]
+                ]
             ]
         ],
         div![

@@ -1,0 +1,7 @@
+.tools {
+  position: fixed;
+  justify-content: center;
+  display: flex;
+  width: 100%;
+  top: 0;
+}
