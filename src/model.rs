@@ -39,7 +39,7 @@ impl Default for Model {
       world,
       window,
       default_layer,
-      canvas_size: Size2D::new(300.0, 150.0),
+      canvas_size: Size2D::new(600.0, 600.0),
       current_state: Box::new(Idle::default()),
     }
   }

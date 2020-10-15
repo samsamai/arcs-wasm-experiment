@@ -99,20 +99,20 @@ impl Component for Main {
     }
 
     fn rendered(&mut self, first_render: bool) {
-        if first_render {
-            self.resize();
-            if let Some(canvas) = self.canvas(CANVAS_ID) {
-                let canvas_ctx = self.canvas_context_2d(&canvas);
-                let browser_window = window();
-                let ctx = WebRenderContext::new(canvas_ctx, browser_window);
+        // if first_render {
+        //     self.resize();
+        //     if let Some(canvas) = self.canvas(CANVAS_ID) {
+        //         let canvas_ctx = self.canvas_context_2d(&canvas);
+        //         let browser_window = window();
+        //         let ctx = WebRenderContext::new(canvas_ctx, browser_window);
 
-                let mut system = self.model.window.render_system(ctx, self.model.canvas_size);
-                RunNow::setup(&mut system, &mut self.model.world);
-                RunNow::run_now(&mut system, &self.model.world);
-            }
-            log::debug!("resize task ");
-            self.update(msg::Msg::WindowResized);
-        }
+        //         let mut system = self.model.window.render_system(ctx, self.model.canvas_size);
+        //         RunNow::setup(&mut system, &mut self.model.world);
+        //         RunNow::run_now(&mut system, &self.model.world);
+        //     }
+        //     log::debug!("resize task ");
+        //     self.update(msg::Msg::WindowResized);
+        // }
     }
 
     fn view(&self) -> Html {
@@ -202,7 +202,7 @@ impl Main {
                 let mut system = self.model.window.render_system(ctx, self.model.canvas_size);
                 log::debug!("RunNow");
 
-                RunNow::setup(&mut system, &mut self.model.world);
+                // RunNow::setup(&mut system, &mut self.model.world);
                 RunNow::run_now(&mut system, &self.model.world);
             }
         }
@@ -229,14 +229,16 @@ impl Main {
             .expect("Problem casting as web_sys::CanvasRenderingContext2d")
     }
 
-    fn draw(&self, canvas: &HtmlCanvasElement) {
+    fn draw(&mut self, canvas: &HtmlCanvasElement) {
         log::debug!("draw called");
 
         let canvas_ctx = self.canvas_context_2d(&canvas);
         let browser_window = window();
         let ctx = WebRenderContext::new(canvas_ctx, browser_window);
+        log::debug!("draw called {:?}", self.model.canvas_size);
 
         let mut system = self.model.window.render_system(ctx, self.model.canvas_size);
+        // RunNow::setup(&mut system, &mut self.model.world);
         RunNow::run_now(&mut system, &self.model.world);
     }
 
