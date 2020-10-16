@@ -101,6 +101,12 @@ pub trait ApplicationContext {
             drawing_object.geometry.translate(displacement);
         }
     }
+
+    fn pan_viewport(&mut self, displacement: Vector) {
+        let mut viewports = self.world().write_storage::<Viewport>();
+        let mut viewport = viewports.get_mut(self.viewport()).unwrap();
+        viewport.translate(displacement);
+    }
 }
 
 impl<'a, A: ApplicationContext + ?Sized> ApplicationContext for &'a mut A {

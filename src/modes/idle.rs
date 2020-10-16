@@ -63,9 +63,9 @@ impl State for Idle {
     fn on_mouse_move(
         &mut self,
         ctx: &mut dyn ApplicationContext,
-        _event_args: &MouseEventArgs,
+        event_args: &MouseEventArgs,
     ) -> Transition {
-        ctx.suppress_redraw();
+        let trans = self.nested.on_mouse_move(ctx, event_args);
         Transition::DoNothing
     }
 }
@@ -99,8 +99,8 @@ impl State for WaitingToSelect {
                 Transition::ChangeState(Box::new(DraggingSelection::from_args(args)))
             }
             _ => {
-                ctx.unselect_all();
-                Transition::DoNothing
+                ctx.select(ctx.viewport());
+                Transition::ChangeState(Box::new(PanningViewport::from_args(args)))
             }
         }
     }
@@ -139,6 +139,40 @@ impl State for DraggingSelection {
         ctx.translate_selection(args.location - self.previous_location);
         self.previous_location = args.location;
 
+        Transition::DoNothing
+    }
+
+    fn on_mouse_up(
+        &mut self,
+        _ctx: &mut dyn ApplicationContext,
+        _args: &MouseEventArgs,
+    ) -> Transition {
+        Transition::ChangeState(Box::new(WaitingToSelect::default()))
+    }
+}
+
+/// The left mouse button is currently pressed and the user is panning the
+/// view
+#[derive(Debug)]
+struct PanningViewport {
+    pan_start: Point,
+}
+
+impl PanningViewport {
+    fn from_args(args: &MouseEventArgs) -> Self {
+        PanningViewport {
+            pan_start: args.location,
+        }
+    }
+}
+
+impl State for PanningViewport {
+    fn on_mouse_move(
+        &mut self,
+        ctx: &mut dyn ApplicationContext,
+        args: &MouseEventArgs,
+    ) -> Transition {
+        ctx.pan_viewport(self.pan_start - args.location);
         Transition::DoNothing
     }
 

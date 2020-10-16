@@ -1,7 +1,8 @@
 use arcs::{
-  components::{Dimension, Layer, Name, PointStyle},
-  euclid::{Point2D, Size2D},
+  components::{Dimension, DrawingObject, Geometry, Layer, Name, PointStyle},
+  euclid::{Length, Point2D, Size2D},
   piet::Color,
+  primitives::Grid,
   specs::prelude::*,
   window::Window,
   CanvasSpace,
@@ -35,11 +36,16 @@ impl Default for Model {
       .style_mut(&mut world.write_storage())
       .background_colour = Color::rgb8(0xff, 0xcc, 0xcb);
 
+    let _ = world.create_entity().with(DrawingObject {
+      geometry: Geometry::Grid(Grid::new(Length::new(20.))),
+      layer: default_layer,
+    });
+
     Model {
       world,
       window,
       default_layer,
-      canvas_size: Size2D::new(300.0, 150.0),
+      canvas_size: Size2D::new(600.0, 600.0),
       current_state: Box::new(Idle::default()),
     }
   }
