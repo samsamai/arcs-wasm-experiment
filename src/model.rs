@@ -1,5 +1,7 @@
 use arcs::{
-  components::{Dimension, DrawingObject, Geometry, Layer, Name, PointStyle},
+  components::{
+    layer::LayerType, Dimension, DrawingObject, Geometry, GridStyle, Layer, Name, PointStyle,
+  },
   euclid::{Length, Point2D, Size2D},
   piet::Color,
   primitives::Grid,
@@ -17,6 +19,7 @@ pub struct Model {
   pub world: World,
   pub window: Window,
   pub default_layer: Entity,
+  pub system_layer: Entity,
   pub canvas_size: Size2D<f64, CanvasSpace>,
   pub current_state: Box<dyn State>,
 }
@@ -29,7 +32,22 @@ impl Default for Model {
       radius: Dimension::Pixels(3.0),
       ..Default::default()
     });
-    let default_layer = Layer::create(builder, Name::new("default"), Layer::default());
+    let default_layer = Layer::create(builder, Name::new("default_layer"), Layer::default());
+
+    let builder = world.create_entity().with(GridStyle {
+      stroke: Color::rgb8(0x94, 0x94, 0x94),
+      width: Dimension::Pixels(0.1),
+    });
+
+    let system_layer = Layer::create(
+      builder,
+      Name::new("system_layer"),
+      Layer {
+        z_level: usize::MIN,
+        visible: true,
+        layer_type: LayerType::System,
+      },
+    );
 
     let window = Window::create(&mut world);
     window
@@ -38,13 +56,14 @@ impl Default for Model {
 
     let _ = world.create_entity().with(DrawingObject {
       geometry: Geometry::Grid(Grid::new(Length::new(20.))),
-      layer: default_layer,
+      layer: system_layer,
     });
 
     Model {
       world,
       window,
       default_layer,
+      system_layer,
       canvas_size: Size2D::new(600.0, 600.0),
       current_state: Box::new(Idle::default()),
     }
