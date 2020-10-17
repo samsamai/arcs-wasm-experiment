@@ -2,7 +2,6 @@ use crate::modes::{
     AddArcMode, AddLineMode, AddPointMode, ApplicationContext, KeyboardEventArgs, MouseEventArgs,
     State, Transition, VirtualKeyCode,
 };
-use crate::msg::ButtonType;
 use arcs::Point;
 
 #[derive(Debug)]
@@ -21,18 +20,6 @@ impl State for Idle {
             Some(VirtualKeyCode::P) => Transition::ChangeState(Box::new(AddPointMode::default())),
             Some(VirtualKeyCode::L) => Transition::ChangeState(Box::new(AddLineMode::default())),
             _ => Transition::DoNothing,
-        }
-    }
-
-    fn on_button_clicked(
-        &mut self,
-        _ctx: &mut dyn ApplicationContext,
-        event_args: &ButtonType,
-    ) -> Transition {
-        match event_args {
-            ButtonType::Arc => Transition::ChangeState(Box::new(AddArcMode::default())),
-            ButtonType::Point => Transition::ChangeState(Box::new(AddPointMode::default())),
-            ButtonType::Line => Transition::ChangeState(Box::new(AddLineMode::default())),
         }
     }
 

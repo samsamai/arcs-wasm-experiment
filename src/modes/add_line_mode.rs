@@ -1,9 +1,7 @@
 use crate::modes::{
-  AddArcMode, AddPointMode, ApplicationContext, Idle, KeyboardEventArgs, MouseEventArgs, State,
-  Transition, VirtualKeyCode,
+  ApplicationContext, Idle, KeyboardEventArgs, MouseEventArgs, State, Transition, VirtualKeyCode,
 };
 
-use crate::msg::ButtonType;
 use arcs::components::{Dimension, DrawingObject, Geometry, PointStyle, Selected};
 use arcs::primitives::Line;
 use arcs::specs::prelude::*;
@@ -70,18 +68,6 @@ impl State for AddLineMode {
   fn on_cancelled(&mut self, ctx: &mut dyn ApplicationContext) {
     self.nested.on_cancelled(ctx);
     self.nested = Box::new(WaitingToPlaceStart::default());
-  }
-
-  fn on_button_clicked(
-    &mut self,
-    _ctx: &mut dyn ApplicationContext,
-    event_args: &ButtonType,
-  ) -> Transition {
-    match event_args {
-      ButtonType::Arc => Transition::ChangeState(Box::new(AddArcMode::default())),
-      ButtonType::Point => Transition::ChangeState(Box::new(AddPointMode::default())),
-      ButtonType::Line => Transition::ChangeState(Box::new(AddLineMode::default())),
-    }
   }
 }
 

@@ -176,10 +176,15 @@ pub trait State: Debug + AsAny {
     /// A ui button was clicked
     fn on_button_clicked(
         &mut self,
-        _ctx: &mut dyn ApplicationContext,
-        _event_args: &ButtonType,
+        ctx: &mut dyn ApplicationContext,
+        event_args: &ButtonType,
     ) -> Transition {
-        Transition::DoNothing
+        self.on_cancelled(ctx);
+        match event_args {
+            ButtonType::Arc => Transition::ChangeState(Box::new(AddArcMode::default())),
+            ButtonType::Point => Transition::ChangeState(Box::new(AddPointMode::default())),
+            ButtonType::Line => Transition::ChangeState(Box::new(AddLineMode::default())),
+        }
     }
 
     fn get_cursor(&self) -> &str {
