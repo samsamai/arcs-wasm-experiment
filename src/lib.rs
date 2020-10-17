@@ -151,6 +151,7 @@ fn view(model: &Model) -> Node<msg::Msg> {
                 St::Height => "100%",
                 St::OverflowY => "hidden",
                 St::OverflowX => "hidden",
+                St::Cursor => {&(*model.current_state.get_cursor())}
             },
             canvas![
                 attrs![

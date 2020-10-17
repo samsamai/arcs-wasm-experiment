@@ -65,8 +65,11 @@ impl State for Idle {
         ctx: &mut dyn ApplicationContext,
         event_args: &MouseEventArgs,
     ) -> Transition {
-        let trans = self.nested.on_mouse_move(ctx, event_args);
-        Transition::DoNothing
+        self.nested.on_mouse_move(ctx, event_args)
+    }
+
+    fn get_cursor(&self) -> &str {
+        self.nested.get_cursor()
     }
 }
 
@@ -182,6 +185,10 @@ impl State for PanningViewport {
         _args: &MouseEventArgs,
     ) -> Transition {
         Transition::ChangeState(Box::new(WaitingToSelect::default()))
+    }
+
+    fn get_cursor(&self) -> &str {
+        "grab"
     }
 }
 

@@ -104,7 +104,7 @@ pub trait ApplicationContext {
 
     fn pan_viewport(&mut self, displacement: Vector) {
         let mut viewports = self.world().write_storage::<Viewport>();
-        let mut viewport = viewports.get_mut(self.viewport()).unwrap();
+        let viewport = viewports.get_mut(self.viewport()).unwrap();
         viewport.translate(displacement);
     }
 }
@@ -180,6 +180,10 @@ pub trait State: Debug + AsAny {
         _event_args: &ButtonType,
     ) -> Transition {
         Transition::DoNothing
+    }
+
+    fn get_cursor(&self) -> &str {
+        "default"
     }
 }
 
