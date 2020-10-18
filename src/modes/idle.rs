@@ -182,10 +182,11 @@ impl State for PanningViewport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use arcs::euclid::Scale;
+    use arcs::euclid::{Length, Scale};
     use arcs::specs::{Builder, Entity, World, WorldExt};
     use arcs::{
-        components::{Layer, Name, Viewport},
+        components::{layer::LayerType, DrawingObject, Geometry, Layer, Name, Viewport},
+        primitives::Grid,
         Point,
     };
 
@@ -193,6 +194,7 @@ mod tests {
         world: World,
         viewport: Entity,
         default_layer: Entity,
+        grid: Entity,
     }
 
     impl Default for DummyContext {
@@ -212,11 +214,30 @@ mod tests {
                 Name::from("default"),
                 Layer::default(),
             );
+            let system_layer = Layer::create(
+                world.create_entity(),
+                Name::new("system_layer"),
+                Layer {
+                    z_level: usize::MIN,
+                    visible: true,
+                    layer_type: LayerType::System,
+                },
+            );
+
+            let grid = Grid::new(Length::new(20.));
+            let grid = world
+                .create_entity()
+                .with(DrawingObject {
+                    geometry: Geometry::Grid(grid),
+                    layer: system_layer,
+                })
+                .build();
 
             DummyContext {
                 world,
                 viewport,
                 default_layer,
+                grid,
             }
         }
     }
@@ -236,6 +257,10 @@ mod tests {
 
         fn default_layer(&self) -> Entity {
             self.default_layer
+        }
+
+        fn grid(&self) -> Entity {
+            self.grid
         }
     }
 

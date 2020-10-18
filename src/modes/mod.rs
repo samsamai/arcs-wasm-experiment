@@ -13,7 +13,7 @@ use super::msg::ButtonType;
 
 use arcs::{
     algorithms::Translate,
-    components::{DrawingObject, Selected, Viewport},
+    components::{DrawingObject, Geometry, Selected, Viewport},
     euclid::{Point2D, Scale},
     specs::prelude::*,
     CanvasSpace, DrawingSpace, Point, Vector,
@@ -29,6 +29,8 @@ pub trait ApplicationContext {
     fn viewport(&self) -> Entity;
     /// The default [`arcs::components::Layer`].
     fn default_layer(&self) -> Entity;
+    /// The grid for this Application
+    fn grid(&self) -> Entity;
 
     /// An optimisation hint that the canvas doesn't need to be redrawn after
     /// this event handler returns.
@@ -107,6 +109,31 @@ pub trait ApplicationContext {
         let viewport = viewports.get_mut(self.viewport()).unwrap();
         viewport.translate(displacement);
     }
+
+    fn effective_location(
+        &self,
+        location: Point2D<f64, DrawingSpace>,
+    ) -> Point2D<f64, DrawingSpace> {
+        // // get the grid
+        // let g = self.grid();
+        // log::debug!("g {:?}", g);
+
+        // let world = self.world();
+        // let drawing_objects: ReadStorage<DrawingObject> = world.read_storage();
+        // let drawing_object = drawing_objects.get(g).unwrap();
+        // if let Geometry::Grid(ref grid) = drawing_object.geometry {
+        //     log::debug!("grid {:?}", grid);
+
+        //     grid.effective_location(location)
+        // } else {
+        //     location
+        // }
+
+        Point2D::new(
+            location.x - location.x % 20.0,
+            location.y - location.y % 20.0,
+        )
+    }
 }
 
 impl<'a, A: ApplicationContext + ?Sized> ApplicationContext for &'a mut A {
@@ -128,6 +155,10 @@ impl<'a, A: ApplicationContext + ?Sized> ApplicationContext for &'a mut A {
 
     fn default_layer(&self) -> Entity {
         (**self).default_layer()
+    }
+
+    fn grid(&self) -> Entity {
+        (**self).grid()
     }
 }
 

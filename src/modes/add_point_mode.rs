@@ -114,13 +114,14 @@ impl State for WaitingToPlace {
         ctx.unselect_all();
 
         let layer = ctx.default_layer();
+        let effective_location = ctx.effective_location(args.location);
+        // let effective_location = args.location;
 
-        // create a point and automatically mark it as selected
         let temp_point = ctx
             .world_mut()
             .create_entity()
             .with(DrawingObject {
-                geometry: Geometry::Point(args.location),
+                geometry: Geometry::Point(effective_location),
                 layer,
             })
             .with(Selected)
@@ -171,10 +172,12 @@ impl State for PlacingPoint {
         let mut drawing_objects: WriteStorage<DrawingObject> = world.write_storage();
 
         let drawing_object = drawing_objects.get_mut(self.temp_point).unwrap();
+        let effective_location = ctx.effective_location(args.location);
+        // let effective_location = args.location;
 
         // we *know* this is a point. Instead of pattern matching or translating
         // the drawing object, we can just overwrite it with its new position.
-        drawing_object.geometry = Geometry::Point(args.location);
+        drawing_object.geometry = Geometry::Point(effective_location);
 
         Transition::DoNothing
     }

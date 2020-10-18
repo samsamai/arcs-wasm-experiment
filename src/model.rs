@@ -7,7 +7,7 @@ use arcs::{
   primitives::Grid,
   specs::prelude::*,
   window::Window,
-  CanvasSpace,
+  CanvasSpace, DrawingSpace,
 };
 
 use super::keyboard_event_args::KeyboardEventArgs;
@@ -22,6 +22,7 @@ pub struct Model {
   pub system_layer: Entity,
   pub canvas_size: Size2D<f64, CanvasSpace>,
   pub current_state: Box<dyn State>,
+  pub grid: Entity,
 }
 
 impl Default for Model {
@@ -54,10 +55,15 @@ impl Default for Model {
       .style_mut(&mut world.write_storage())
       .background_colour = Color::rgb8(0xff, 0xcc, 0xcb);
 
-    let _ = world.create_entity().with(DrawingObject {
-      geometry: Geometry::Grid(Grid::new(Length::new(20.))),
-      layer: system_layer,
-    });
+    let grid = Grid::new(Length::new(20.));
+
+    let grid = world
+      .create_entity()
+      .with(DrawingObject {
+        geometry: Geometry::Grid(grid),
+        layer: system_layer,
+      })
+      .build();
 
     Model {
       world,
@@ -66,6 +72,7 @@ impl Default for Model {
       system_layer,
       canvas_size: Size2D::new(600.0, 600.0),
       current_state: Box::new(Idle::default()),
+      grid: grid,
     }
   }
 }
@@ -83,6 +90,7 @@ impl Model {
         window: &mut self.window,
         default_layer: self.default_layer,
         suppress_redraw: &mut suppress_redraw,
+        grid: self.grid,
       },
     );
     self.handle_transition(transition);
@@ -146,6 +154,7 @@ struct Context<'model> {
   window: &'model mut Window,
   default_layer: Entity,
   suppress_redraw: &'model mut bool,
+  grid: Entity,
 }
 
 impl<'model> ApplicationContext for Context<'model> {
@@ -167,5 +176,9 @@ impl<'model> ApplicationContext for Context<'model> {
 
   fn suppress_redraw(&mut self) {
     *self.suppress_redraw = true;
+  }
+
+  fn grid(&self) -> Entity {
+    self.grid
   }
 }
