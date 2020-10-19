@@ -115,19 +115,21 @@ impl State for WaitingToPlace {
 
         let layer = ctx.default_layer();
         let effective_location = ctx.effective_location(args.location);
+        let command_entity = ctx.command();
+        ctx.add_command(command_entity, args, layer);
         // let effective_location = args.location;
 
-        let temp_point = ctx
-            .world_mut()
-            .create_entity()
-            .with(DrawingObject {
-                geometry: Geometry::Point(effective_location),
-                layer,
-            })
-            .with(Selected)
-            .build();
+        // let temp_point = ctx
+        //     .world_mut()
+        //     .create_entity()
+        //     .with(DrawingObject {
+        //         geometry: Geometry::Point(effective_location),
+        //         layer,
+        //     })
+        //     .with(Selected)
+        //     .build();
 
-        Transition::ChangeState(Box::new(PlacingPoint::new(temp_point)))
+        Transition::ChangeState(Box::new(PlacingPoint {}))
     }
 
     fn on_mouse_move(
@@ -141,15 +143,7 @@ impl State for WaitingToPlace {
 }
 
 #[derive(Debug)]
-struct PlacingPoint {
-    temp_point: Entity,
-}
-
-impl PlacingPoint {
-    fn new(temp_point: Entity) -> Self {
-        PlacingPoint { temp_point }
-    }
-}
+struct PlacingPoint;
 
 impl State for PlacingPoint {
     fn on_mouse_up(
@@ -168,22 +162,22 @@ impl State for PlacingPoint {
         ctx: &mut dyn ApplicationContext,
         args: &MouseEventArgs,
     ) -> Transition {
-        let world = ctx.world();
-        let mut drawing_objects: WriteStorage<DrawingObject> = world.write_storage();
+        // let world = ctx.world();
+        // let mut drawing_objects: WriteStorage<DrawingObject> = world.write_storage();
 
-        let drawing_object = drawing_objects.get_mut(self.temp_point).unwrap();
-        let effective_location = ctx.effective_location(args.location);
-        // let effective_location = args.location;
+        // let drawing_object = drawing_objects.get_mut(self.temp_point).unwrap();
+        // let effective_location = ctx.effective_location(args.location);
+        // // let effective_location = args.location;
 
-        // we *know* this is a point. Instead of pattern matching or translating
-        // the drawing object, we can just overwrite it with its new position.
-        drawing_object.geometry = Geometry::Point(effective_location);
+        // // we *know* this is a point. Instead of pattern matching or translating
+        // // the drawing object, we can just overwrite it with its new position.
+        // drawing_object.geometry = Geometry::Point(effective_location);
 
         Transition::DoNothing
     }
 
     fn on_cancelled(&mut self, ctx: &mut dyn ApplicationContext) {
         // make sure we clean up the temporary point.
-        let _ = ctx.world_mut().delete_entity(self.temp_point);
+        // let _ = ctx.world_mut().delete_entity(self.temp_point);
     }
 }

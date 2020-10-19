@@ -13,7 +13,7 @@ use super::msg::ButtonType;
 
 use arcs::{
     algorithms::Translate,
-    components::{DrawingObject, Geometry, Selected, Viewport},
+    components::{AddPoint, DrawingObject, Geometry, Selected, Viewport},
     euclid::{Point2D, Scale},
     specs::prelude::*,
     CanvasSpace, DrawingSpace, Point, Vector,
@@ -31,6 +31,7 @@ pub trait ApplicationContext {
     fn default_layer(&self) -> Entity;
     /// The grid for this Application
     fn grid(&self) -> Entity;
+    fn command(&self) -> Entity;
 
     /// An optimisation hint that the canvas doesn't need to be redrawn after
     /// this event handler returns.
@@ -134,6 +135,22 @@ pub trait ApplicationContext {
             location.y - location.y % 20.0,
         )
     }
+
+    fn add_command(&mut self, command: Entity, args: &MouseEventArgs, layer: Entity) {
+        let mut world = self.world_mut();
+
+        let mut storage: WriteStorage<AddPoint> = world.write_storage();
+        storage.insert(
+            command,
+            AddPoint {
+                location: args.location,
+                layer,
+            },
+        );
+
+        // let updater: ReadStorage<LazyUpdate> = world.read_storage();
+        // self.command().insert(AddPointMode{}).build();
+    }
 }
 
 impl<'a, A: ApplicationContext + ?Sized> ApplicationContext for &'a mut A {
@@ -158,6 +175,9 @@ impl<'a, A: ApplicationContext + ?Sized> ApplicationContext for &'a mut A {
     }
 
     fn grid(&self) -> Entity {
+        (**self).grid()
+    }
+    fn command(&self) -> Entity {
         (**self).grid()
     }
 }

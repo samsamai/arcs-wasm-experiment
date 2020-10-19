@@ -73,6 +73,9 @@ fn update(msg: msg::Msg, model: &mut Model, _orders: &mut impl Orders<msg::Msg>)
     }
 }
 fn draw(canvas: &HtmlCanvasElement, model: &mut Model) {
+    model.dispatcher.dispatch(&model.world);
+    model.world.maintain();
+
     let canvas_ctx = seed::canvas_context_2d(&canvas);
     let browser_window = seed::window();
     let ctx = WebRenderContext::new(canvas_ctx, browser_window);

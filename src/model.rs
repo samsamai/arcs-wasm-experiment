@@ -1,11 +1,13 @@
 use arcs::{
   components::{
-    layer::LayerType, Dimension, DrawingObject, Geometry, GridStyle, Layer, Name, PointStyle,
+    layer::LayerType, CursorPosition, Dimension, DrawingObject, Geometry, GridStyle, Layer, Name,
+    PointStyle,
   },
   euclid::{Length, Point2D, Size2D},
   piet::Color,
   primitives::Grid,
   specs::prelude::*,
+  systems::draw::Draw,
   window::Window,
   CanvasSpace, DrawingSpace,
 };
@@ -23,6 +25,8 @@ pub struct Model {
   pub canvas_size: Size2D<f64, CanvasSpace>,
   pub current_state: Box<dyn State>,
   pub grid: Entity,
+  pub command: Entity,
+  pub dispatcher: Dispatcher<'static, 'static>,
 }
 
 impl Default for Model {
@@ -65,6 +69,17 @@ impl Default for Model {
       })
       .build();
 
+    let pointer = world
+      .create_entity()
+      .with(CursorPosition {
+        position: Point2D::new(0., 0.),
+      })
+      .build();
+
+    let command = world.create_entity().with(Name::new("command")).build();
+
+    let mut dispatcher = DispatcherBuilder::new().with(Draw, "draw", &[]).build();
+
     Model {
       world,
       window,
@@ -73,6 +88,8 @@ impl Default for Model {
       canvas_size: Size2D::new(600.0, 600.0),
       current_state: Box::new(Idle::default()),
       grid: grid,
+      command: command,
+      dispatcher: dispatcher,
     }
   }
 }
@@ -91,6 +108,7 @@ impl Model {
         default_layer: self.default_layer,
         suppress_redraw: &mut suppress_redraw,
         grid: self.grid,
+        command: self.command,
       },
     );
     self.handle_transition(transition);
@@ -155,6 +173,7 @@ struct Context<'model> {
   default_layer: Entity,
   suppress_redraw: &'model mut bool,
   grid: Entity,
+  command: Entity,
 }
 
 impl<'model> ApplicationContext for Context<'model> {
@@ -180,5 +199,8 @@ impl<'model> ApplicationContext for Context<'model> {
 
   fn grid(&self) -> Entity {
     self.grid
+  }
+  fn command(&self) -> Entity {
+    self.command
   }
 }

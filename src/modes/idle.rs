@@ -195,6 +195,7 @@ mod tests {
         viewport: Entity,
         default_layer: Entity,
         grid: Entity,
+        command: Entity,
     }
 
     impl Default for DummyContext {
@@ -233,11 +234,14 @@ mod tests {
                 })
                 .build();
 
+            let command = world.create_entity().with(Name::new("command")).build();
+
             DummyContext {
                 world,
                 viewport,
                 default_layer,
                 grid,
+                command,
             }
         }
     }
@@ -261,6 +265,9 @@ mod tests {
 
         fn grid(&self) -> Entity {
             self.grid
+        }
+        fn command(&self) -> Entity {
+            self.command
         }
     }
 
