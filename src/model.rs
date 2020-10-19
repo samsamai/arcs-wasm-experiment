@@ -8,6 +8,7 @@ use arcs::{
   primitives::Grid,
   specs::prelude::*,
   systems::draw::Draw,
+  systems::mover::Mover,
   window::Window,
   CanvasSpace, DrawingSpace,
 };
@@ -24,6 +25,7 @@ pub struct Model {
   pub system_layer: Entity,
   pub canvas_size: Size2D<f64, CanvasSpace>,
   pub current_state: Box<dyn State>,
+  pub pointer: Entity,
   pub grid: Entity,
   pub command: Entity,
   pub dispatcher: Dispatcher<'static, 'static>,
@@ -61,6 +63,10 @@ impl Default for Model {
 
     let grid = Grid::new(Length::new(20.));
 
+    let pointer = world.create_entity().build();
+
+    let cursor_position = world.insert(CursorPosition::default());
+
     let grid = world
       .create_entity()
       .with(DrawingObject {
@@ -69,16 +75,12 @@ impl Default for Model {
       })
       .build();
 
-    let pointer = world
-      .create_entity()
-      .with(CursorPosition {
-        position: Point2D::new(0., 0.),
-      })
-      .build();
-
     let command = world.create_entity().with(Name::new("command")).build();
 
-    let mut dispatcher = DispatcherBuilder::new().with(Draw, "draw", &[]).build();
+    let mut dispatcher = DispatcherBuilder::new()
+      .with(Draw, "draw", &[])
+      .with(Mover, "mover", &[])
+      .build();
 
     Model {
       world,
@@ -88,6 +90,7 @@ impl Default for Model {
       canvas_size: Size2D::new(600.0, 600.0),
       current_state: Box::new(Idle::default()),
       grid: grid,
+      pointer: pointer,
       command: command,
       dispatcher: dispatcher,
     }
@@ -107,6 +110,7 @@ impl Model {
         window: &mut self.window,
         default_layer: self.default_layer,
         suppress_redraw: &mut suppress_redraw,
+        pointer: self.pointer,
         grid: self.grid,
         command: self.command,
       },
@@ -172,6 +176,7 @@ struct Context<'model> {
   window: &'model mut Window,
   default_layer: Entity,
   suppress_redraw: &'model mut bool,
+  pointer: Entity,
   grid: Entity,
   command: Entity,
 }
@@ -195,6 +200,10 @@ impl<'model> ApplicationContext for Context<'model> {
 
   fn suppress_redraw(&mut self) {
     *self.suppress_redraw = true;
+  }
+
+  fn pointer(&self) -> Entity {
+    self.pointer
   }
 
   fn grid(&self) -> Entity {

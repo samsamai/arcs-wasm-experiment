@@ -4,8 +4,9 @@ use crate::modes::{
 };
 
 use crate::msg::ButtonType;
-use arcs::components::{DrawingObject, Geometry, Selected};
+use arcs::components::{CursorPosition, DrawingObject, Geometry, Selected};
 use arcs::specs::prelude::*;
+use arcs::specs::WorldExt;
 
 #[derive(Debug)]
 pub struct AddPointMode {
@@ -114,21 +115,8 @@ impl State for WaitingToPlace {
         ctx.unselect_all();
 
         let layer = ctx.default_layer();
-        let effective_location = ctx.effective_location(args.location);
         let command_entity = ctx.command();
         ctx.add_command(command_entity, args, layer);
-        // let effective_location = args.location;
-
-        // let temp_point = ctx
-        //     .world_mut()
-        //     .create_entity()
-        //     .with(DrawingObject {
-        //         geometry: Geometry::Point(effective_location),
-        //         layer,
-        //     })
-        //     .with(Selected)
-        //     .build();
-
         Transition::ChangeState(Box::new(PlacingPoint {}))
     }
 
@@ -148,12 +136,13 @@ struct PlacingPoint;
 impl State for PlacingPoint {
     fn on_mouse_up(
         &mut self,
-        _ctx: &mut dyn ApplicationContext,
+        ctx: &mut dyn ApplicationContext,
         _args: &MouseEventArgs,
     ) -> Transition {
         log::debug!("PlacingPoint on_mouse_up called");
 
-        // We "commit" the change by leaving the temporary point where it is
+        ctx.unselect_all();
+
         Transition::ChangeState(Box::new(WaitingToPlace::default()))
     }
 
@@ -162,16 +151,8 @@ impl State for PlacingPoint {
         ctx: &mut dyn ApplicationContext,
         args: &MouseEventArgs,
     ) -> Transition {
-        // let world = ctx.world();
-        // let mut drawing_objects: WriteStorage<DrawingObject> = world.write_storage();
-
-        // let drawing_object = drawing_objects.get_mut(self.temp_point).unwrap();
-        // let effective_location = ctx.effective_location(args.location);
-        // // let effective_location = args.location;
-
-        // // we *know* this is a point. Instead of pattern matching or translating
-        // // the drawing object, we can just overwrite it with its new position.
-        // drawing_object.geometry = Geometry::Point(effective_location);
+        let mut cursor_position = ctx.world_mut().write_resource::<CursorPosition>();
+        cursor_position.location = args.location;
 
         Transition::DoNothing
     }

@@ -29,6 +29,8 @@ pub trait ApplicationContext {
     fn viewport(&self) -> Entity;
     /// The default [`arcs::components::Layer`].
     fn default_layer(&self) -> Entity;
+    /// The pointer for this Application
+    fn pointer(&self) -> Entity;
     /// The grid for this Application
     fn grid(&self) -> Entity;
     fn command(&self) -> Entity;
@@ -174,9 +176,14 @@ impl<'a, A: ApplicationContext + ?Sized> ApplicationContext for &'a mut A {
         (**self).default_layer()
     }
 
+    fn pointer(&self) -> Entity {
+        (**self).pointer()
+    }
+
     fn grid(&self) -> Entity {
         (**self).grid()
     }
+
     fn command(&self) -> Entity {
         (**self).grid()
     }
