@@ -9,6 +9,7 @@ use arcs::{
   specs::prelude::*,
   systems::draw::Draw,
   systems::mover::Mover,
+  systems::snapper::Snapper,
   window::Window,
   CanvasSpace, DrawingSpace,
 };
@@ -17,6 +18,11 @@ use super::keyboard_event_args::KeyboardEventArgs;
 use super::msg::ButtonType;
 
 use super::modes::{ApplicationContext, Idle, MouseButtons, MouseEventArgs, State, Transition};
+
+pub enum CommandType {
+  AddPoint,
+  Delete,
+}
 
 pub struct Model {
   pub world: World,
@@ -61,12 +67,11 @@ impl Default for Model {
       .style_mut(&mut world.write_storage())
       .background_colour = Color::rgb8(0xff, 0xcc, 0xcb);
 
-    let grid = Grid::new(Length::new(20.));
-
     let pointer = world.create_entity().build();
 
     let cursor_position = world.insert(CursorPosition::default());
 
+    let grid = Grid::new(Length::new(20.));
     let grid = world
       .create_entity()
       .with(DrawingObject {
@@ -79,7 +84,8 @@ impl Default for Model {
 
     let mut dispatcher = DispatcherBuilder::new()
       .with(Draw, "draw", &[])
-      .with(Mover, "mover", &[])
+      .with(Snapper, "snapper", &["draw"])
+      .with(Mover, "mover", &["snapper"])
       .build();
 
     Model {

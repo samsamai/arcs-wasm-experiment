@@ -113,31 +113,6 @@ pub trait ApplicationContext {
         viewport.translate(displacement);
     }
 
-    fn effective_location(
-        &self,
-        location: Point2D<f64, DrawingSpace>,
-    ) -> Point2D<f64, DrawingSpace> {
-        // // get the grid
-        // let g = self.grid();
-        // log::debug!("g {:?}", g);
-
-        // let world = self.world();
-        // let drawing_objects: ReadStorage<DrawingObject> = world.read_storage();
-        // let drawing_object = drawing_objects.get(g).unwrap();
-        // if let Geometry::Grid(ref grid) = drawing_object.geometry {
-        //     log::debug!("grid {:?}", grid);
-
-        //     grid.effective_location(location)
-        // } else {
-        //     location
-        // }
-
-        Point2D::new(
-            location.x - location.x % 20.0,
-            location.y - location.y % 20.0,
-        )
-    }
-
     fn add_command(&mut self, command: Entity, args: &MouseEventArgs, layer: Entity) {
         let mut world = self.world_mut();
 
