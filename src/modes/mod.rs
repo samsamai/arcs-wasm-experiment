@@ -13,7 +13,7 @@ use super::msg::ButtonType;
 
 use arcs::{
     algorithms::Translate,
-    components::{AddPoint, DrawingObject, Geometry, Selected, Viewport},
+    components::{AddPoint, Delete, DrawingObject, Geometry, Selected, Viewport},
     euclid::{Point2D, Scale},
     specs::prelude::*,
     CanvasSpace, DrawingSpace, Point, Vector,
@@ -111,22 +111,6 @@ pub trait ApplicationContext {
         let mut viewports = self.world().write_storage::<Viewport>();
         let viewport = viewports.get_mut(self.viewport()).unwrap();
         viewport.translate(displacement);
-    }
-
-    fn add_command(&mut self, command: Entity, args: &MouseEventArgs, layer: Entity) {
-        let mut world = self.world_mut();
-
-        let mut storage: WriteStorage<AddPoint> = world.write_storage();
-        storage.insert(
-            command,
-            AddPoint {
-                location: args.location,
-                layer,
-            },
-        );
-
-        // let updater: ReadStorage<LazyUpdate> = world.read_storage();
-        // self.command().insert(AddPointMode{}).build();
     }
 }
 

@@ -4,7 +4,7 @@ use crate::modes::{
 };
 
 use crate::msg::ButtonType;
-use arcs::components::{CursorPosition, DrawingObject, Geometry, Selected};
+use arcs::components::{AddPoint, CursorPosition, Delete, DrawingObject, Geometry, Selected};
 use arcs::specs::prelude::*;
 use arcs::specs::WorldExt;
 
@@ -116,7 +116,14 @@ impl State for WaitingToPlace {
 
         let layer = ctx.default_layer();
         let command_entity = ctx.command();
-        ctx.add_command(command_entity, args, layer);
+        let mut storage: WriteStorage<AddPoint> = ctx.world_mut().write_storage();
+        storage.insert(
+            command_entity,
+            AddPoint {
+                location: args.location,
+                layer,
+            },
+        );
         Transition::ChangeState(Box::new(PlacingPoint {}))
     }
 
@@ -159,6 +166,8 @@ impl State for PlacingPoint {
 
     fn on_cancelled(&mut self, ctx: &mut dyn ApplicationContext) {
         // make sure we clean up the temporary point.
-        // let _ = ctx.world_mut().delete_entity(self.temp_point);
+        let command_entity = ctx.command();
+        let mut storage: WriteStorage<Delete> = ctx.world_mut().write_storage();
+        let _ = storage.insert(command_entity, Delete {});
     }
 }

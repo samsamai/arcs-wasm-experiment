@@ -7,6 +7,7 @@ use arcs::{
   piet::Color,
   primitives::Grid,
   specs::prelude::*,
+  systems::deleter::Deleter,
   systems::draw::Draw,
   systems::mover::Mover,
   systems::snapper::Snapper,
@@ -18,11 +19,6 @@ use super::keyboard_event_args::KeyboardEventArgs;
 use super::msg::ButtonType;
 
 use super::modes::{ApplicationContext, Idle, MouseButtons, MouseEventArgs, State, Transition};
-
-pub enum CommandType {
-  AddPoint,
-  Delete,
-}
 
 pub struct Model {
   pub world: World,
@@ -84,6 +80,7 @@ impl Default for Model {
 
     let mut dispatcher = DispatcherBuilder::new()
       .with(Draw, "draw", &[])
+      .with(Deleter, "deleter", &[])
       .with(Snapper, "snapper", &["draw"])
       .with(Mover, "mover", &["snapper"])
       .build();
