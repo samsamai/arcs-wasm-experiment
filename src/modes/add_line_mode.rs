@@ -103,14 +103,13 @@ impl State for WaitingToPlaceStart {
     let layer = ctx.default_layer();
 
     let command_entity = ctx.command();
-    let mut storage: WriteStorage<AddPoint> = ctx.world_mut().write_storage();
-    let _ = storage.insert(
-      command_entity,
-      AddPoint {
-        location: args.location,
-        layer,
-      },
-    );
+    let world = ctx.world_mut();
+    {
+      let mut storage: WriteStorage<AddPoint> = world.write_storage();
+      let _ = storage.insert(command_entity, AddPoint { layer });
+    }
+    let mut cursor_position = world.write_resource::<CursorPosition>();
+    cursor_position.location = args.location;
 
     Transition::ChangeState(Box::new(PlacingStart {}))
   }
@@ -152,13 +151,7 @@ impl State for PlacingStart {
     }
 
     let mut storage: WriteStorage<AddLine> = world.write_storage();
-    let _ = storage.insert(
-      command_entity,
-      AddLine {
-        location: effective_location,
-        layer,
-      },
-    );
+    let _ = storage.insert(command_entity, AddLine { layer });
 
     let mut storage: WriteStorage<Delete> = world.write_storage();
     let _ = storage.insert(command_entity, Delete {});

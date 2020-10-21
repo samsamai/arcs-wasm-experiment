@@ -116,14 +116,13 @@ impl State for WaitingToPlace {
 
         let layer = ctx.default_layer();
         let command_entity = ctx.command();
-        let mut storage: WriteStorage<AddPoint> = ctx.world_mut().write_storage();
-        let _ = storage.insert(
-            command_entity,
-            AddPoint {
-                location: args.location,
-                layer,
-            },
-        );
+        {
+            let mut storage: WriteStorage<AddPoint> = ctx.world_mut().write_storage();
+            let _ = storage.insert(command_entity, AddPoint { layer });
+        }
+        let mut cursor_position = ctx.world_mut().write_resource::<CursorPosition>();
+        cursor_position.location = args.location;
+
         Transition::ChangeState(Box::new(PlacingPoint {}))
     }
 

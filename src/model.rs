@@ -79,9 +79,9 @@ impl Default for Model {
     let command = world.create_entity().with(Name::new("command")).build();
 
     let mut dispatcher = DispatcherBuilder::new()
-      .with(Draw, "draw", &[])
+      .with(Snapper, "snapper", &[])
+      .with(Draw, "draw", &["snapper"])
       .with(Deleter, "deleter", &[])
-      .with(Snapper, "snapper", &["draw"])
       .with(Mover, "mover", &["snapper"])
       .build();
 
