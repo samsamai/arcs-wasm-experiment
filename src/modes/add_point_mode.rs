@@ -117,7 +117,7 @@ impl State for WaitingToPlace {
         let layer = ctx.default_layer();
         let command_entity = ctx.command();
         let mut storage: WriteStorage<AddPoint> = ctx.world_mut().write_storage();
-        storage.insert(
+        let _ = storage.insert(
             command_entity,
             AddPoint {
                 location: args.location,
