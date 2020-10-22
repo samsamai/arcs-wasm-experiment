@@ -11,7 +11,8 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-arcs = { path = "../arcs/arcs" }
+# arcs = { path = "../arcs/arcs" }
+arcs = { git = "https://github.com/samsamai/arcs.git", branch = "snap" }
 bitflags = "1.2.1"
 console_log = "0.2"
 env_logger = "0.7"

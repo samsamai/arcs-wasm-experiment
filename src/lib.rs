@@ -138,7 +138,7 @@ impl Component for Main {
                             </div>
                         </div>
                     </nav>
-                    <div class="canvas-container">
+                    <div class="canvas-container" style={format!("cursor: {}", self.model.current_state.get_cursor())}>
                         <canvas id="canvas" width={self.model.canvas_size.width}
                         height={self.model.canvas_size.height} tabindex=1
                             onmousedown=self.link.callback(|e| msg::Msg::MouseDown(canvas_location(e)))
