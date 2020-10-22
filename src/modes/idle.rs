@@ -2,7 +2,6 @@ use crate::modes::{
     AddArcMode, AddLineMode, AddPointMode, ApplicationContext, KeyboardEventArgs, MouseEventArgs,
     State, Transition, VirtualKeyCode,
 };
-use crate::msg::ButtonType;
 use arcs::Point;
 
 #[derive(Debug)]
@@ -21,18 +20,6 @@ impl State for Idle {
             Some(VirtualKeyCode::P) => Transition::ChangeState(Box::new(AddPointMode::default())),
             Some(VirtualKeyCode::L) => Transition::ChangeState(Box::new(AddLineMode::default())),
             _ => Transition::DoNothing,
-        }
-    }
-
-    fn on_button_clicked(
-        &mut self,
-        _ctx: &mut dyn ApplicationContext,
-        event_args: &ButtonType,
-    ) -> Transition {
-        match event_args {
-            ButtonType::Arc => Transition::ChangeState(Box::new(AddArcMode::default())),
-            ButtonType::Point => Transition::ChangeState(Box::new(AddPointMode::default())),
-            ButtonType::Line => Transition::ChangeState(Box::new(AddLineMode::default())),
         }
     }
 
@@ -63,10 +50,13 @@ impl State for Idle {
     fn on_mouse_move(
         &mut self,
         ctx: &mut dyn ApplicationContext,
-        _event_args: &MouseEventArgs,
+        event_args: &MouseEventArgs,
     ) -> Transition {
-        ctx.suppress_redraw();
-        Transition::DoNothing
+        self.nested.on_mouse_move(ctx, event_args)
+    }
+
+    fn get_cursor(&self) -> &str {
+        self.nested.get_cursor()
     }
 }
 
@@ -99,8 +89,8 @@ impl State for WaitingToSelect {
                 Transition::ChangeState(Box::new(DraggingSelection::from_args(args)))
             }
             _ => {
-                ctx.unselect_all();
-                Transition::DoNothing
+                ctx.select(ctx.viewport());
+                Transition::ChangeState(Box::new(PanningViewport::from_args(args)))
             }
         }
     }
@@ -151,13 +141,52 @@ impl State for DraggingSelection {
     }
 }
 
+/// The left mouse button is currently pressed and the user is panning the
+/// view
+#[derive(Debug)]
+struct PanningViewport {
+    pan_start: Point,
+}
+
+impl PanningViewport {
+    fn from_args(args: &MouseEventArgs) -> Self {
+        PanningViewport {
+            pan_start: args.location,
+        }
+    }
+}
+
+impl State for PanningViewport {
+    fn on_mouse_move(
+        &mut self,
+        ctx: &mut dyn ApplicationContext,
+        args: &MouseEventArgs,
+    ) -> Transition {
+        ctx.pan_viewport(self.pan_start - args.location);
+        Transition::DoNothing
+    }
+
+    fn on_mouse_up(
+        &mut self,
+        _ctx: &mut dyn ApplicationContext,
+        _args: &MouseEventArgs,
+    ) -> Transition {
+        Transition::ChangeState(Box::new(WaitingToSelect::default()))
+    }
+
+    fn get_cursor(&self) -> &str {
+        "grab"
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use arcs::euclid::Scale;
+    use arcs::euclid::{Length, Scale};
     use arcs::specs::{Builder, Entity, World, WorldExt};
     use arcs::{
-        components::{Layer, Name, Viewport},
+        components::{layer::LayerType, DrawingObject, Geometry, Layer, Name, Viewport},
+        primitives::Grid,
         Point,
     };
 
@@ -165,6 +194,8 @@ mod tests {
         world: World,
         viewport: Entity,
         default_layer: Entity,
+        grid: Entity,
+        command: Entity,
     }
 
     impl Default for DummyContext {
@@ -184,11 +215,33 @@ mod tests {
                 Name::from("default"),
                 Layer::default(),
             );
+            let system_layer = Layer::create(
+                world.create_entity(),
+                Name::new("system_layer"),
+                Layer {
+                    z_level: usize::MIN,
+                    visible: true,
+                    layer_type: LayerType::System,
+                },
+            );
+
+            let grid = Grid::new(Length::new(20.));
+            let grid = world
+                .create_entity()
+                .with(DrawingObject {
+                    geometry: Geometry::Grid(grid),
+                    layer: system_layer,
+                })
+                .build();
+
+            let command = world.create_entity().with(Name::new("command")).build();
 
             DummyContext {
                 world,
                 viewport,
                 default_layer,
+                grid,
+                command,
             }
         }
     }
@@ -208,6 +261,13 @@ mod tests {
 
         fn default_layer(&self) -> Entity {
             self.default_layer
+        }
+
+        fn grid(&self) -> Entity {
+            self.grid
+        }
+        fn command(&self) -> Entity {
+            self.command
         }
     }
 

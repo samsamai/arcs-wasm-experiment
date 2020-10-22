@@ -1,12 +1,13 @@
 use crate::modes::{
-  AddArcMode, AddPointMode, ApplicationContext, Idle, KeyboardEventArgs, MouseEventArgs, State,
-  Transition, VirtualKeyCode,
+  ApplicationContext, Idle, KeyboardEventArgs, MouseEventArgs, State, Transition, VirtualKeyCode,
 };
 
-use crate::msg::ButtonType;
-use arcs::components::{Dimension, DrawingObject, Geometry, PointStyle, Selected};
-use arcs::primitives::Line;
 use arcs::specs::prelude::*;
+use arcs::{
+  components::{AddLine, AddPoint, CursorPosition, Delete, DrawingObject, Geometry, Selected},
+  euclid::Point2D,
+  DrawingSpace,
+};
 
 #[derive(Debug)]
 pub struct AddLineMode {
@@ -71,18 +72,6 @@ impl State for AddLineMode {
     self.nested.on_cancelled(ctx);
     self.nested = Box::new(WaitingToPlaceStart::default());
   }
-
-  fn on_button_clicked(
-    &mut self,
-    _ctx: &mut dyn ApplicationContext,
-    event_args: &ButtonType,
-  ) -> Transition {
-    match event_args {
-      ButtonType::Arc => Transition::ChangeState(Box::new(AddArcMode::default())),
-      ButtonType::Point => Transition::ChangeState(Box::new(AddPointMode::default())),
-      ButtonType::Line => Transition::ChangeState(Box::new(AddLineMode::default())),
-    }
-  }
 }
 
 impl Default for AddLineMode {
@@ -113,67 +102,16 @@ impl State for WaitingToPlaceStart {
 
     let layer = ctx.default_layer();
 
-    // create a point and automatically mark it as selected
-    let temp_point = ctx
-      .world_mut()
-      .create_entity()
-      .with(DrawingObject {
-        geometry: Geometry::Point(args.location),
-        layer,
-      })
-      .with(PointStyle {
-        radius: Dimension::Pixels(1.0),
-        ..Default::default()
-      })
-      .with(Selected)
-      .build();
+    let command_entity = ctx.command();
+    let world = ctx.world_mut();
+    {
+      let mut storage: WriteStorage<AddPoint> = world.write_storage();
+      let _ = storage.insert(command_entity, AddPoint { layer });
+    }
+    let mut cursor_position = world.write_resource::<CursorPosition>();
+    cursor_position.location = args.location;
 
-    Transition::ChangeState(Box::new(PlacingStart::new(temp_point)))
-  }
-
-  fn on_mouse_move(
-    &mut self,
-    ctx: &mut dyn ApplicationContext,
-    _event_args: &MouseEventArgs,
-  ) -> Transition {
-    ctx.suppress_redraw();
-    Transition::DoNothing
-  }
-}
-
-#[derive(Debug)]
-struct PlacingStart {
-  temp_point: Entity,
-}
-
-impl PlacingStart {
-  fn new(temp_point: Entity) -> Self {
-    PlacingStart { temp_point }
-  }
-}
-
-impl State for PlacingStart {
-  fn on_mouse_up(&mut self, ctx: &mut dyn ApplicationContext, args: &MouseEventArgs) -> Transition {
-    log::debug!("PlacingStart on_mouse_up called");
-
-    // make sure nothing else is selected
-    ctx.unselect_all();
-
-    let layer = ctx.default_layer();
-
-    // create a point and automatically mark it as selected
-    let temp_line = ctx
-      .world_mut()
-      .create_entity()
-      .with(DrawingObject {
-        geometry: Geometry::Line(Line::new(args.location, args.location)),
-        layer,
-      })
-      .with(Selected)
-      .build();
-
-    let _ = ctx.world_mut().delete_entity(self.temp_point);
-    Transition::ChangeState(Box::new(WaitingToPlaceEnd::new(temp_line)))
+    Transition::ChangeState(Box::new(PlacingStart {}))
   }
 
   fn on_mouse_move(
@@ -181,21 +119,62 @@ impl State for PlacingStart {
     ctx: &mut dyn ApplicationContext,
     args: &MouseEventArgs,
   ) -> Transition {
-    let world = ctx.world();
-    let mut drawing_objects: WriteStorage<DrawingObject> = world.write_storage();
+    ctx.suppress_redraw();
+    let mut cursor_position = ctx.world_mut().write_resource::<CursorPosition>();
+    cursor_position.location = args.location;
 
-    let drawing_object = drawing_objects.get_mut(self.temp_point).unwrap();
+    Transition::DoNothing
+  }
+}
 
-    // we *know* this is a point. Instead of pattern matching or translating
-    // the drawing object, we can just overwrite it with its new position.
-    drawing_object.geometry = Geometry::Point(args.location);
+#[derive(Debug)]
+struct PlacingStart;
+
+impl State for PlacingStart {
+  fn on_mouse_up(&mut self, ctx: &mut dyn ApplicationContext, args: &MouseEventArgs) -> Transition {
+    log::debug!("PlacingStart on_mouse_up called");
+
+    let command_entity = ctx.command();
+    let layer = ctx.default_layer();
+    let mut world = ctx.world_mut();
+
+    let entities: Entities = world.entities();
+    let selecteds: ReadStorage<Selected> = world.read_storage();
+    let drawing_objects: ReadStorage<DrawingObject> = world.read_storage();
+
+    let mut effective_location: Point2D<f64, DrawingSpace> = Point2D::new(0., 0.);
+    for (entity, selected, drawing_object) in (&entities, &selecteds, &drawing_objects).join() {
+      if let Geometry::Point(point) = drawing_object.geometry {
+        effective_location = point;
+        break;
+      };
+    }
+
+    let mut storage: WriteStorage<AddLine> = world.write_storage();
+    let _ = storage.insert(command_entity, AddLine { layer });
+
+    let mut storage: WriteStorage<Delete> = world.write_storage();
+    let _ = storage.insert(command_entity, Delete {});
+
+    Transition::ChangeState(Box::new(WaitingToPlaceEnd {}))
+  }
+
+  fn on_mouse_move(
+    &mut self,
+    ctx: &mut dyn ApplicationContext,
+    args: &MouseEventArgs,
+  ) -> Transition {
+    let mut cursor_position = ctx.world_mut().write_resource::<CursorPosition>();
+    cursor_position.location = args.location;
 
     Transition::DoNothing
   }
 
   fn on_cancelled(&mut self, ctx: &mut dyn ApplicationContext) {
     // make sure we clean up the temporary point.
-    let _ = ctx.world_mut().delete_entity(self.temp_point);
+    let command_entity = ctx.command();
+    let mut storage: WriteStorage<Delete> = ctx.world_mut().write_storage();
+    let _ = storage.insert(command_entity, Delete {});
   }
 }
 
@@ -204,15 +183,8 @@ impl State for PlacingStart {
 // The base sub-state for [`AddPointMode`]. We're waiting for the user to click
 /// so we can start adding a point to the canvas.
 #[derive(Debug)]
-struct WaitingToPlaceEnd {
-  temp_line: Entity,
-}
+struct WaitingToPlaceEnd;
 
-impl WaitingToPlaceEnd {
-  fn new(temp_line: Entity) -> Self {
-    WaitingToPlaceEnd { temp_line }
-  }
-}
 impl State for WaitingToPlaceEnd {
   fn on_mouse_down(
     &mut self,
@@ -221,7 +193,7 @@ impl State for WaitingToPlaceEnd {
   ) -> Transition {
     log::debug!("WaitingToPlace on_mouse_down called");
 
-    Transition::ChangeState(Box::new(PlacingEnd::new(self.temp_line)))
+    Transition::ChangeState(Box::new(PlacingEnd {}))
   }
 
   fn on_mouse_move(
@@ -231,43 +203,31 @@ impl State for WaitingToPlaceEnd {
   ) -> Transition {
     log::debug!("PlacingEnd on_mouse_move called");
 
-    let world = ctx.world();
-    let mut drawing_objects: WriteStorage<DrawingObject> = world.write_storage();
-
-    let drawing_object = drawing_objects.get_mut(self.temp_line).unwrap();
-    log::debug!("drawing_object.geometry {:?}", drawing_object.geometry);
-
-    if let Geometry::Line(line) = drawing_object.geometry {
-      drawing_object.geometry = Geometry::Line(Line::new(line.start, args.location));
-    };
+    let mut cursor_position = ctx.world_mut().write_resource::<CursorPosition>();
+    cursor_position.location = args.location;
 
     Transition::DoNothing
   }
 
   fn on_cancelled(&mut self, ctx: &mut dyn ApplicationContext) {
     // make sure we clean up the temporary line.
-    let _ = ctx.world_mut().delete_entity(self.temp_line);
+    let command_entity = ctx.command();
+    let mut storage: WriteStorage<Delete> = ctx.world_mut().write_storage();
+    let _ = storage.insert(command_entity, Delete {});
   }
 }
 
 #[derive(Debug)]
-struct PlacingEnd {
-  temp_line: Entity,
-}
-
-impl PlacingEnd {
-  fn new(temp_line: Entity) -> Self {
-    PlacingEnd { temp_line }
-  }
-}
+struct PlacingEnd;
 
 impl State for PlacingEnd {
   fn on_mouse_up(
     &mut self,
-    _ctx: &mut dyn ApplicationContext,
+    ctx: &mut dyn ApplicationContext,
     _args: &MouseEventArgs,
   ) -> Transition {
     log::debug!("PlacingEnd on_mouse_up called");
+    ctx.unselect_all();
 
     Transition::ChangeState(Box::new(WaitingToPlaceStart::default()))
   }
@@ -279,20 +239,16 @@ impl State for PlacingEnd {
   ) -> Transition {
     log::debug!("PlacingEnd on_mouse_move called");
 
-    let world = ctx.world();
-    let mut drawing_objects: WriteStorage<DrawingObject> = world.write_storage();
-
-    let drawing_object = drawing_objects.get_mut(self.temp_line).unwrap();
-
-    if let Geometry::Line(line) = drawing_object.geometry {
-      drawing_object.geometry = Geometry::Line(Line::new(line.start, args.location));
-    };
+    let mut cursor_position = ctx.world_mut().write_resource::<CursorPosition>();
+    cursor_position.location = args.location;
 
     Transition::DoNothing
   }
 
   fn on_cancelled(&mut self, ctx: &mut dyn ApplicationContext) {
     // make sure we clean up the temporary line.
-    let _ = ctx.world_mut().delete_entity(self.temp_line);
+    let command_entity = ctx.command();
+    let mut storage: WriteStorage<Delete> = ctx.world_mut().write_storage();
+    let _ = storage.insert(command_entity, Delete {});
   }
 }

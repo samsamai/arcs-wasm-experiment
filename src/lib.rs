@@ -97,6 +97,7 @@ impl Component for Main {
 
         false
     }
+}
 
     fn rendered(&mut self, first_render: bool) {
         // if first_render {

@@ -1,10 +1,18 @@
 use arcs::{
-  components::{Dimension, Layer, Name, PointStyle},
-  euclid::{Point2D, Size2D},
+  components::{
+    layer::LayerType, CursorPosition, Dimension, DrawingObject, Geometry, GridStyle, Layer, Name,
+    PointStyle,
+  },
+  euclid::{Length, Point2D, Size2D},
   piet::Color,
+  primitives::Grid,
   specs::prelude::*,
+  systems::deleter::Deleter,
+  systems::draw::Draw,
+  systems::mover::Mover,
+  systems::snapper::Snapper,
   window::Window,
-  CanvasSpace,
+  CanvasSpace, DrawingSpace,
 };
 
 use super::keyboard_event_args::KeyboardEventArgs;
@@ -16,8 +24,13 @@ pub struct Model {
   pub world: World,
   pub window: Window,
   pub default_layer: Entity,
+  pub system_layer: Entity,
   pub canvas_size: Size2D<f64, CanvasSpace>,
   pub current_state: Box<dyn State>,
+  pub pointer: Entity,
+  pub grid: Entity,
+  pub command: Entity,
+  pub dispatcher: Dispatcher<'static, 'static>,
 }
 
 impl Default for Model {
@@ -28,19 +41,61 @@ impl Default for Model {
       radius: Dimension::Pixels(3.0),
       ..Default::default()
     });
-    let default_layer = Layer::create(builder, Name::new("default"), Layer::default());
+    let default_layer = Layer::create(builder, Name::new("default_layer"), Layer::default());
+
+    let builder = world.create_entity().with(GridStyle {
+      stroke: Color::rgb8(0x94, 0x94, 0x94),
+      width: Dimension::Pixels(0.1),
+    });
+
+    let system_layer = Layer::create(
+      builder,
+      Name::new("system_layer"),
+      Layer {
+        z_level: usize::MIN,
+        visible: true,
+        layer_type: LayerType::System,
+      },
+    );
 
     let window = Window::create(&mut world);
     window
       .style_mut(&mut world.write_storage())
       .background_colour = Color::rgb8(0xff, 0xcc, 0xcb);
 
+    let pointer = world.create_entity().build();
+
+    let cursor_position = world.insert(CursorPosition::default());
+
+    let grid = Grid::new(Length::new(20.));
+    let grid = world
+      .create_entity()
+      .with(DrawingObject {
+        geometry: Geometry::Grid(grid),
+        layer: system_layer,
+      })
+      .build();
+
+    let command = world.create_entity().with(Name::new("command")).build();
+
+    let mut dispatcher = DispatcherBuilder::new()
+      .with(Snapper, "snapper", &[])
+      .with(Draw, "draw", &["snapper"])
+      .with(Deleter, "deleter", &[])
+      .with(Mover, "mover", &["snapper"])
+      .build();
+
     Model {
       world,
       window,
       default_layer,
+      system_layer,
       canvas_size: Size2D::new(600.0, 600.0),
       current_state: Box::new(Idle::default()),
+      grid: grid,
+      pointer: pointer,
+      command: command,
+      dispatcher: dispatcher,
     }
   }
 }
@@ -58,6 +113,9 @@ impl Model {
         window: &mut self.window,
         default_layer: self.default_layer,
         suppress_redraw: &mut suppress_redraw,
+        pointer: self.pointer,
+        grid: self.grid,
+        command: self.command,
       },
     );
     self.handle_transition(transition);
@@ -121,6 +179,9 @@ struct Context<'model> {
   window: &'model mut Window,
   default_layer: Entity,
   suppress_redraw: &'model mut bool,
+  pointer: Entity,
+  grid: Entity,
+  command: Entity,
 }
 
 impl<'model> ApplicationContext for Context<'model> {
@@ -142,5 +203,16 @@ impl<'model> ApplicationContext for Context<'model> {
 
   fn suppress_redraw(&mut self) {
     *self.suppress_redraw = true;
+  }
+
+  fn pointer(&self) -> Entity {
+    self.pointer
+  }
+
+  fn grid(&self) -> Entity {
+    self.grid
+  }
+  fn command(&self) -> Entity {
+    self.command
   }
 }
