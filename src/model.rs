@@ -17,6 +17,7 @@ use arcs::{
 
 use super::keyboard_event_args::KeyboardEventArgs;
 use super::msg::ButtonType;
+use super::Props;
 
 use super::modes::{ApplicationContext, Idle, MouseButtons, MouseEventArgs, State, Transition};
 
@@ -34,8 +35,8 @@ pub struct Model {
   pub snap: bool,
 }
 
-impl Default for Model {
-  fn default() -> Model {
+impl Model {
+  pub fn new(props: Props) -> Model {
     let mut world = World::new();
     arcs::components::register(&mut world);
     let builder = world.create_entity().with(PointStyle {
@@ -91,7 +92,7 @@ impl Default for Model {
       window,
       default_layer,
       system_layer,
-      canvas_size: Size2D::new(900.0, 900.0),
+      canvas_size: Size2D::new(props.width, props.height),
       current_state: Box::new(Idle::default()),
       grid: grid,
       pointer: pointer,
@@ -100,9 +101,7 @@ impl Default for Model {
       snap: false,
     }
   }
-}
 
-impl Model {
   fn handle_event<F>(&mut self, handler: F) -> bool
   where
     F: FnOnce(&mut dyn State, &mut Context<'_>) -> Transition,
@@ -151,6 +150,8 @@ impl Model {
     match args {
       ButtonType::Snap => {
         self.snap = !self.snap;
+
+        let entities: Entities = self.world.entities();
         let mut drawing_objects: WriteStorage<DrawingObject> = self.world.write_storage();
         let mut effective_location: Point2D<f64, DrawingSpace> = Point2D::new(0., 0.);
         for (entity, mut drawing_object) in (&entities, &mut drawing_objects).join() {
