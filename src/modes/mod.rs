@@ -1,7 +1,7 @@
 mod add_arc_mode;
 pub mod add_line_mode;
 pub mod add_point_mode;
-mod idle;
+pub mod idle;
 
 pub use add_arc_mode::AddArcMode;
 pub use add_line_mode::AddLineMode;
@@ -201,6 +201,8 @@ pub trait State: Debug + AsAny {
             ButtonType::Arc => Transition::ChangeState(Box::new(AddArcMode::default())),
             ButtonType::Point => Transition::ChangeState(Box::new(AddPointMode::default())),
             ButtonType::Line => Transition::ChangeState(Box::new(AddLineMode::default())),
+            ButtonType::Select => Transition::ChangeState(Box::new(Idle::default())),
+            ButtonType::Snap => Transition::DoNothing,
         }
     }
 

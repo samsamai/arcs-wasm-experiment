@@ -31,6 +31,7 @@ pub struct Model {
   pub grid: Entity,
   pub command: Entity,
   pub dispatcher: Dispatcher<'static, 'static>,
+  pub snap: bool,
 }
 
 impl Default for Model {
@@ -67,7 +68,7 @@ impl Default for Model {
 
     let cursor_position = world.insert(CursorPosition::default());
 
-    let grid = Grid::new(Length::new(20.));
+    let grid = Grid::new(Length::new(20.), false);
     let grid = world
       .create_entity()
       .with(DrawingObject {
@@ -90,12 +91,13 @@ impl Default for Model {
       window,
       default_layer,
       system_layer,
-      canvas_size: Size2D::new(600.0, 600.0),
+      canvas_size: Size2D::new(900.0, 900.0),
       current_state: Box::new(Idle::default()),
       grid: grid,
       pointer: pointer,
       command: command,
       dispatcher: dispatcher,
+      snap: false,
     }
   }
 }
@@ -146,6 +148,21 @@ impl Model {
 
   pub fn on_button_clicked(&mut self, args: ButtonType) -> bool {
     log::debug!("[ON_BUTTON_CLICKED] {:?}, {:?}", args, self.current_state);
+    match args {
+      ButtonType::Snap => {
+        self.snap = !self.snap;
+        let mut drawing_objects: WriteStorage<DrawingObject> = self.world.write_storage();
+        let mut effective_location: Point2D<f64, DrawingSpace> = Point2D::new(0., 0.);
+        for (entity, mut drawing_object) in (&entities, &mut drawing_objects).join() {
+          if let Geometry::Grid(mut grid) = drawing_object.geometry {
+            grid.snap = self.snap;
+            drawing_object.geometry = Geometry::Grid(grid);
+          };
+        }
+      }
+      _ => (),
+    }
+
     self.handle_event(|state, ctx| state.on_button_clicked(ctx, &args))
   }
 

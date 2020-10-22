@@ -86,6 +86,8 @@ impl State for AddPointMode {
             ButtonType::Arc => Transition::ChangeState(Box::new(AddArcMode::default())),
             ButtonType::Point => Transition::ChangeState(Box::new(AddPointMode::default())),
             ButtonType::Line => Transition::ChangeState(Box::new(AddLineMode::default())),
+            ButtonType::Select => Transition::ChangeState(Box::new(Idle::default())),
+            ButtonType::Snap => Transition::DoNothing,
         }
     }
 }

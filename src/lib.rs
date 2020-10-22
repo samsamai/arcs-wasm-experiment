@@ -77,7 +77,20 @@ impl Component for Main {
             msg::Msg::MouseMove(cursor) => self.model.on_mouse_move(cursor),
             msg::Msg::KeyPressed(args) => self.model.on_key_pressed(args),
             msg::Msg::ButtonClicked(args) => self.model.on_button_clicked(args),
-            msg::Msg::WindowResized => self.resize(),
+            msg::Msg::WindowResized => {
+                self.resize();
+                if let Some(canvas) = self.canvas(CANVAS_ID) {
+                    let canvas_ctx = self.canvas_context_2d(&canvas);
+                    let browser_window = window();
+                    let ctx = WebRenderContext::new(canvas_ctx, browser_window);
+
+                    let mut system = self.model.window.render_system(ctx, self.model.canvas_size);
+                    RunNow::setup(&mut system, &mut self.model.world);
+                    RunNow::run_now(&mut system, &self.model.world);
+                }
+                log::debug!("resize task ");
+                true
+            }
         };
 
         if needs_render {
@@ -97,23 +110,23 @@ impl Component for Main {
 
         false
     }
-}
 
     fn rendered(&mut self, first_render: bool) {
-        // if first_render {
-        //     self.resize();
-        //     if let Some(canvas) = self.canvas(CANVAS_ID) {
-        //         let canvas_ctx = self.canvas_context_2d(&canvas);
-        //         let browser_window = window();
-        //         let ctx = WebRenderContext::new(canvas_ctx, browser_window);
+        if first_render {
+            self.resize();
+            if let Some(canvas) = self.canvas(CANVAS_ID) {
+                canvas.focus();
+                let canvas_ctx = self.canvas_context_2d(&canvas);
+                let browser_window = window();
+                let ctx = WebRenderContext::new(canvas_ctx, browser_window);
 
-        //         let mut system = self.model.window.render_system(ctx, self.model.canvas_size);
-        //         RunNow::setup(&mut system, &mut self.model.world);
-        //         RunNow::run_now(&mut system, &self.model.world);
-        //     }
-        //     log::debug!("resize task ");
-        //     self.update(msg::Msg::WindowResized);
-        // }
+                let mut system = self.model.window.render_system(ctx, self.model.canvas_size);
+                RunNow::setup(&mut system, &mut self.model.world);
+                RunNow::run_now(&mut system, &self.model.world);
+            }
+            log::debug!("resize task ");
+            self.update(msg::Msg::WindowResized);
+        }
     }
 
     fn view(&self) -> Html {
@@ -123,11 +136,17 @@ impl Component for Main {
                         <div class="level-item has-text-centered">
                             <div class="field has-addons">
                                 <p class="control"
+                                    onclick=self.link.callback(|_| msg::Msg::ButtonClicked(ButtonType::Select))
+                                >{self.view_select_btn()}</p>
+                                <p class="control"
                                     onclick=self.link.callback(|_| msg::Msg::ButtonClicked(ButtonType::Point))
                                 >{self.view_point_btn()}</p>
                                 <p class="control"
                                     onclick=self.link.callback(|_| msg::Msg::ButtonClicked(ButtonType::Line))
                                 >{self.view_line_btn()}</p>
+                                <p class="control"
+                                    onclick=self.link.callback(|_| msg::Msg::ButtonClicked(ButtonType::Snap))
+                                >{self.view_snap_btn()}</p>
                             </div>
                         </div>
                     </nav>
@@ -146,6 +165,28 @@ impl Component for Main {
 }
 
 impl Main {
+    fn view_select_btn(&self) -> Html {
+        let classes = if (*self.model.current_state)
+            .as_any()
+            .is::<modes::idle::Idle>()
+        {
+            "button is-light is-inverted is-active"
+        } else {
+            "button is-light"
+        };
+
+        html! {
+            <button class={classes}
+                onclick=self.link.callback(|_| msg::Msg::ButtonClicked(ButtonType::Point))
+            >
+                <span class="icon is-small">
+                    <i class="fas fa-mouse-pointer"></i>
+                </span>
+                <span>{"Select"}</span>
+            </button>
+        }
+    }
+
     fn view_point_btn(&self) -> Html {
         let classes = if (*self.model.current_state)
             .as_any()
@@ -184,6 +225,25 @@ impl Main {
                     <i class="fas fa-pen-fancy"></i>
                 </span>
                 <span>{"Line"}</span>
+            </button>
+        }
+    }
+
+    fn view_snap_btn(&self) -> Html {
+        let classes = "button is-light";
+
+        let icon_class = if self.model.snap {
+            "fas fa-toggle-on"
+        } else {
+            "fas fa-toggle-off"
+        };
+
+        html! {
+            <button class={classes}>
+                <span class="icon is-small">
+                    <i class={icon_class}></i>
+                </span>
+                <span>{"Snap"}</span>
             </button>
         }
     }
@@ -231,17 +291,28 @@ impl Main {
     }
 
     fn draw(&mut self, canvas: &HtmlCanvasElement) {
-        log::debug!("draw called");
+        self.model.dispatcher.dispatch(&self.model.world);
+        self.model.world.maintain();
 
         let canvas_ctx = self.canvas_context_2d(&canvas);
         let browser_window = window();
         let ctx = WebRenderContext::new(canvas_ctx, browser_window);
-        log::debug!("draw called {:?}", self.model.canvas_size);
 
         let mut system = self.model.window.render_system(ctx, self.model.canvas_size);
         // RunNow::setup(&mut system, &mut self.model.world);
         RunNow::run_now(&mut system, &self.model.world);
     }
+
+    // fn draw(canvas: &HtmlCanvasElement, model: &mut Model) {
+
+    //     let canvas_ctx = seed::canvas_context_2d(&canvas);
+    //     let browser_window = seed::window();
+    //     let ctx = WebRenderContext::new(canvas_ctx, browser_window);
+
+    //     let mut system = model.window.render_system(ctx, model.canvas_size);
+    //     RunNow::setup(&mut system, &mut model.world);
+    //     RunNow::run_now(&mut system, &model.world);
+    // }
 
     fn parent_size(&self, element: &HtmlElement) -> Option<Size2D<f64, CanvasSpace>> {
         let window = window();

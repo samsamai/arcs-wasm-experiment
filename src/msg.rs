@@ -7,6 +7,9 @@ pub enum ButtonType {
   Arc,
   Point,
   Line,
+  Select,
+  Snap,
+
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
