@@ -3,16 +3,17 @@ use arcs::{euclid::Point2D, CanvasSpace};
 use web_sys::KeyboardEvent;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum ButtonType {
   Arc,
   Point,
   Line,
   Select,
   Snap,
-
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum Msg {
   Rendered,
   MouseDown(Point2D<f64, CanvasSpace>),

@@ -2,11 +2,9 @@ use crate::modes::{
   ApplicationContext, Idle, KeyboardEventArgs, MouseEventArgs, State, Transition, VirtualKeyCode,
 };
 
-use arcs::specs::prelude::*;
 use arcs::{
-  components::{AddLine, AddPoint, CursorPosition, Delete, DrawingObject, Geometry, Selected},
-  euclid::Point2D,
-  DrawingSpace,
+  components::{AddLine, AddPoint, CursorPosition, Delete},
+  specs::prelude::*,
 };
 
 #[derive(Debug)]
@@ -131,24 +129,14 @@ impl State for WaitingToPlaceStart {
 struct PlacingStart;
 
 impl State for PlacingStart {
-  fn on_mouse_up(&mut self, ctx: &mut dyn ApplicationContext, args: &MouseEventArgs) -> Transition {
-    log::debug!("PlacingStart on_mouse_up called");
-
+  fn on_mouse_up(
+    &mut self,
+    ctx: &mut dyn ApplicationContext,
+    _args: &MouseEventArgs,
+  ) -> Transition {
     let command_entity = ctx.command();
     let layer = ctx.default_layer();
-    let mut world = ctx.world_mut();
-
-    let entities: Entities = world.entities();
-    let selecteds: ReadStorage<Selected> = world.read_storage();
-    let drawing_objects: ReadStorage<DrawingObject> = world.read_storage();
-
-    let mut effective_location: Point2D<f64, DrawingSpace> = Point2D::new(0., 0.);
-    for (entity, selected, drawing_object) in (&entities, &selecteds, &drawing_objects).join() {
-      if let Geometry::Point(point) = drawing_object.geometry {
-        effective_location = point;
-        break;
-      };
-    }
+    let world = ctx.world_mut();
 
     let mut storage: WriteStorage<AddLine> = world.write_storage();
     let _ = storage.insert(command_entity, AddLine { layer });
@@ -191,8 +179,6 @@ impl State for WaitingToPlaceEnd {
     _ctx: &mut dyn ApplicationContext,
     _args: &MouseEventArgs,
   ) -> Transition {
-    log::debug!("WaitingToPlace on_mouse_down called");
-
     Transition::ChangeState(Box::new(PlacingEnd {}))
   }
 
@@ -201,8 +187,6 @@ impl State for WaitingToPlaceEnd {
     ctx: &mut dyn ApplicationContext,
     args: &MouseEventArgs,
   ) -> Transition {
-    log::debug!("PlacingEnd on_mouse_move called");
-
     let mut cursor_position = ctx.world_mut().write_resource::<CursorPosition>();
     cursor_position.location = args.location;
 
@@ -226,9 +210,7 @@ impl State for PlacingEnd {
     ctx: &mut dyn ApplicationContext,
     _args: &MouseEventArgs,
   ) -> Transition {
-    log::debug!("PlacingEnd on_mouse_up called");
     ctx.unselect_all();
-
     Transition::ChangeState(Box::new(WaitingToPlaceStart::default()))
   }
 
@@ -237,8 +219,6 @@ impl State for PlacingEnd {
     ctx: &mut dyn ApplicationContext,
     args: &MouseEventArgs,
   ) -> Transition {
-    log::debug!("PlacingEnd on_mouse_move called");
-
     let mut cursor_position = ctx.world_mut().write_resource::<CursorPosition>();
     cursor_position.location = args.location;
 

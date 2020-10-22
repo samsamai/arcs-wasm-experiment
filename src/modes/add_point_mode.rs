@@ -4,7 +4,7 @@ use crate::modes::{
 };
 
 use crate::msg::ButtonType;
-use arcs::components::{AddPoint, CursorPosition, Delete, DrawingObject, Geometry, Selected};
+use arcs::components::{AddPoint, CursorPosition, Delete};
 use arcs::specs::prelude::*;
 use arcs::specs::WorldExt;
 
@@ -111,9 +111,6 @@ impl State for WaitingToPlace {
         ctx: &mut dyn ApplicationContext,
         args: &MouseEventArgs,
     ) -> Transition {
-        log::debug!("WaitingToPlace on_mouse_down called");
-
-        // make sure nothing else is selected
         ctx.unselect_all();
 
         let layer = ctx.default_layer();
@@ -147,10 +144,7 @@ impl State for PlacingPoint {
         ctx: &mut dyn ApplicationContext,
         _args: &MouseEventArgs,
     ) -> Transition {
-        log::debug!("PlacingPoint on_mouse_up called");
-
         ctx.unselect_all();
-
         Transition::ChangeState(Box::new(WaitingToPlace::default()))
     }
 

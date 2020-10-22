@@ -1,7 +1,6 @@
 #![recursion_limit = "512"]
-
 use wasm_bindgen::prelude::*;
-use web_sys::{Element, HtmlCanvasElement, HtmlElement, MouseEvent};
+use web_sys::{HtmlCanvasElement, HtmlElement, MouseEvent};
 
 use arcs::{
     euclid::{Point2D, Size2D},
@@ -44,16 +43,13 @@ pub fn run_app() {
 }
 
 struct Main {
+    props: Props,
     link: ComponentLink<Self>,
     model: Model,
     _resize_task: ResizeTask,
 }
 
-// enum Msg {
-//     AddOne,
-// }
-
-#[derive(Clone, PartialEq, Properties)]
+#[derive(Copy, Clone, PartialEq, Properties)]
 pub struct Props {
     #[prop_or_default]
     pub width: f64,
@@ -68,6 +64,7 @@ impl Component for Main {
             ResizeService::new().register(link.callback(|_wd| msg::Msg::WindowResized));
 
         Self {
+            props,
             link,
             model: Model::new(props),
             _resize_task,
@@ -96,13 +93,13 @@ impl Component for Main {
         true
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        // Should only return "true" if new properties are different to
-        // previously received properties.
-        // This component has no properties so we will always return "false".
-        log::debug!("change called");
-
-        false
+    fn change(&mut self, props: Self::Properties) -> ShouldRender {
+        if self.props != props {
+            self.props = props;
+            true
+        } else {
+            false
+        }
     }
 
     fn rendered(&mut self, first_render: bool) {
@@ -280,23 +277,11 @@ impl Main {
         RunNow::run_now(&mut system, &self.model.world);
     }
 
-    // fn draw(canvas: &HtmlCanvasElement, model: &mut Model) {
-
-    //     let canvas_ctx = seed::canvas_context_2d(&canvas);
-    //     let browser_window = seed::window();
-    //     let ctx = WebRenderContext::new(canvas_ctx, browser_window);
-
-    //     let mut system = model.window.render_system(ctx, model.canvas_size);
-    //     RunNow::setup(&mut system, &mut model.world);
-    //     RunNow::run_now(&mut system, &model.world);
-    // }
-
     fn parent_size(&self, element: &HtmlElement) -> Option<Size2D<f64, CanvasSpace>> {
         let window = window();
         let height =
             window.inner_height().ok()?.as_f64()? - f64::try_from(element.offset_top()).ok()?;
         let width = window.inner_width().ok()?.as_f64()?;
-        log::debug!("parent size is {}x{}", height, width);
 
         Some(Size2D::new(
             f64::try_from(width).ok()?,

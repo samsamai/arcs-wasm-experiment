@@ -13,7 +13,7 @@ use super::msg::ButtonType;
 
 use arcs::{
     algorithms::Translate,
-    components::{AddPoint, Delete, DrawingObject, Geometry, Selected, Viewport},
+    components::{DrawingObject, Selected, Viewport},
     euclid::{Point2D, Scale},
     specs::prelude::*,
     CanvasSpace, DrawingSpace, Point, Vector,
@@ -68,6 +68,8 @@ pub trait ApplicationContext {
         ) {
             let search_radius = pixels_per_drawing_unit.get() / PIXEL_RADIUS;
 
+            // TODO: selection is currently not working, reactivate
+            // this by fixing the Space issue
             // let space = world.read_resource::<Space>();
 
             // for spatial in space.query_point(location, search_radius) {
@@ -230,6 +232,7 @@ pub enum Transition {
     DoNothing,
 }
 
+#[allow(dead_code)]
 impl Transition {
     /// Checks whether the transition will change to a particular [`State`].
     pub fn changes_to<S>(&self) -> bool

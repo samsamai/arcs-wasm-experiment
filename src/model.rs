@@ -12,7 +12,7 @@ use arcs::{
   systems::mover::Mover,
   systems::snapper::Snapper,
   window::Window,
-  CanvasSpace, DrawingSpace,
+  CanvasSpace,
 };
 
 use super::keyboard_event_args::KeyboardEventArgs;
@@ -67,7 +67,7 @@ impl Model {
 
     let pointer = world.create_entity().build();
 
-    let cursor_position = world.insert(CursorPosition::default());
+    let _cursor_position = world.insert(CursorPosition::default());
 
     let grid = Grid::new(Length::new(20.), false);
     let grid = world
@@ -80,7 +80,7 @@ impl Model {
 
     let command = world.create_entity().with(Name::new("command")).build();
 
-    let mut dispatcher = DispatcherBuilder::new()
+    let dispatcher = DispatcherBuilder::new()
       .with(Snapper, "snapper", &[])
       .with(Draw, "draw", &["snapper"])
       .with(Deleter, "deleter", &[])
@@ -153,8 +153,7 @@ impl Model {
 
         let entities: Entities = self.world.entities();
         let mut drawing_objects: WriteStorage<DrawingObject> = self.world.write_storage();
-        let mut effective_location: Point2D<f64, DrawingSpace> = Point2D::new(0., 0.);
-        for (entity, mut drawing_object) in (&entities, &mut drawing_objects).join() {
+        for (_entity, mut drawing_object) in (&entities, &mut drawing_objects).join() {
           if let Geometry::Grid(mut grid) = drawing_object.geometry {
             grid.snap = self.snap;
             drawing_object.geometry = Geometry::Grid(grid);
