@@ -4,8 +4,9 @@ use crate::modes::{
 };
 
 use crate::msg::ButtonType;
-use arcs::components::{DrawingObject, Geometry, Selected};
+use arcs::components::{AddPoint, CursorPosition, Delete};
 use arcs::specs::prelude::*;
+use arcs::specs::WorldExt;
 
 #[derive(Debug)]
 pub struct AddPointMode {
@@ -85,6 +86,8 @@ impl State for AddPointMode {
             ButtonType::Arc => Transition::ChangeState(Box::new(AddArcMode::default())),
             ButtonType::Point => Transition::ChangeState(Box::new(AddPointMode::default())),
             ButtonType::Line => Transition::ChangeState(Box::new(AddLineMode::default())),
+            ButtonType::Select => Transition::ChangeState(Box::new(Idle::default())),
+            ButtonType::Snap => Transition::DoNothing,
         }
     }
 }
@@ -108,25 +111,18 @@ impl State for WaitingToPlace {
         ctx: &mut dyn ApplicationContext,
         args: &MouseEventArgs,
     ) -> Transition {
-        log::debug!("WaitingToPlace on_mouse_down called");
-
-        // make sure nothing else is selected
         ctx.unselect_all();
 
         let layer = ctx.default_layer();
+        let command_entity = ctx.command();
+        {
+            let mut storage: WriteStorage<AddPoint> = ctx.world_mut().write_storage();
+            let _ = storage.insert(command_entity, AddPoint { layer });
+        }
+        let mut cursor_position = ctx.world_mut().write_resource::<CursorPosition>();
+        cursor_position.location = args.location;
 
-        // create a point and automatically mark it as selected
-        let temp_point = ctx
-            .world_mut()
-            .create_entity()
-            .with(DrawingObject {
-                geometry: Geometry::Point(args.location),
-                layer,
-            })
-            .with(Selected)
-            .build();
-
-        Transition::ChangeState(Box::new(PlacingPoint::new(temp_point)))
+        Transition::ChangeState(Box::new(PlacingPoint {}))
     }
 
     fn on_mouse_move(
@@ -140,25 +136,15 @@ impl State for WaitingToPlace {
 }
 
 #[derive(Debug)]
-struct PlacingPoint {
-    temp_point: Entity,
-}
-
-impl PlacingPoint {
-    fn new(temp_point: Entity) -> Self {
-        PlacingPoint { temp_point }
-    }
-}
+struct PlacingPoint;
 
 impl State for PlacingPoint {
     fn on_mouse_up(
         &mut self,
-        _ctx: &mut dyn ApplicationContext,
+        ctx: &mut dyn ApplicationContext,
         _args: &MouseEventArgs,
     ) -> Transition {
-        log::debug!("PlacingPoint on_mouse_up called");
-
-        // We "commit" the change by leaving the temporary point where it is
+        ctx.unselect_all();
         Transition::ChangeState(Box::new(WaitingToPlace::default()))
     }
 
@@ -167,20 +153,16 @@ impl State for PlacingPoint {
         ctx: &mut dyn ApplicationContext,
         args: &MouseEventArgs,
     ) -> Transition {
-        let world = ctx.world();
-        let mut drawing_objects: WriteStorage<DrawingObject> = world.write_storage();
-
-        let drawing_object = drawing_objects.get_mut(self.temp_point).unwrap();
-
-        // we *know* this is a point. Instead of pattern matching or translating
-        // the drawing object, we can just overwrite it with its new position.
-        drawing_object.geometry = Geometry::Point(args.location);
+        let mut cursor_position = ctx.world_mut().write_resource::<CursorPosition>();
+        cursor_position.location = args.location;
 
         Transition::DoNothing
     }
 
     fn on_cancelled(&mut self, ctx: &mut dyn ApplicationContext) {
         // make sure we clean up the temporary point.
-        let _ = ctx.world_mut().delete_entity(self.temp_point);
+        let command_entity = ctx.command();
+        let mut storage: WriteStorage<Delete> = ctx.world_mut().write_storage();
+        let _ = storage.insert(command_entity, Delete {});
     }
 }

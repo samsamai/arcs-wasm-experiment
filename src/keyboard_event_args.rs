@@ -1,3 +1,4 @@
+#[allow(unused_macros)]
 use std::{fmt::Debug, str::FromStr};
 
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
@@ -9,6 +10,7 @@ pub struct KeyboardEventArgs {
   pub key: Option<VirtualKeyCode>,
 }
 
+#[allow(dead_code)]
 impl KeyboardEventArgs {
   /// Create a new [`KeyboardEventArgs`] which just presses a key.
   pub fn pressing(key: VirtualKeyCode) -> Self {
@@ -21,6 +23,7 @@ impl KeyboardEventArgs {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[allow(non_camel_case_types)]
+#[allow(dead_code)]
 pub enum VirtualKeyCode {
   Escape,
   Enter,

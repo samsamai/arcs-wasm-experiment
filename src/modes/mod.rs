@@ -1,7 +1,7 @@
 mod add_arc_mode;
 pub mod add_line_mode;
 pub mod add_point_mode;
-mod idle;
+pub mod idle;
 
 pub use add_arc_mode::AddArcMode;
 pub use add_line_mode::AddLineMode;
@@ -29,6 +29,11 @@ pub trait ApplicationContext {
     fn viewport(&self) -> Entity;
     /// The default [`arcs::components::Layer`].
     fn default_layer(&self) -> Entity;
+    /// The pointer for this Application
+    fn pointer(&self) -> Entity;
+    /// The grid for this Application
+    fn grid(&self) -> Entity;
+    fn command(&self) -> Entity;
 
     /// An optimisation hint that the canvas doesn't need to be redrawn after
     /// this event handler returns.
@@ -63,6 +68,8 @@ pub trait ApplicationContext {
         ) {
             let search_radius = pixels_per_drawing_unit.get() / PIXEL_RADIUS;
 
+            // TODO: selection is currently not working, reactivate
+            // this by fixing the Space issue
             // let space = world.read_resource::<Space>();
 
             // for spatial in space.query_point(location, search_radius) {
@@ -101,6 +108,12 @@ pub trait ApplicationContext {
             drawing_object.geometry.translate(displacement);
         }
     }
+
+    fn pan_viewport(&mut self, displacement: Vector) {
+        let mut viewports = self.world().write_storage::<Viewport>();
+        let viewport = viewports.get_mut(self.viewport()).unwrap();
+        viewport.translate(displacement);
+    }
 }
 
 impl<'a, A: ApplicationContext + ?Sized> ApplicationContext for &'a mut A {
@@ -122,6 +135,18 @@ impl<'a, A: ApplicationContext + ?Sized> ApplicationContext for &'a mut A {
 
     fn default_layer(&self) -> Entity {
         (**self).default_layer()
+    }
+
+    fn pointer(&self) -> Entity {
+        (**self).pointer()
+    }
+
+    fn grid(&self) -> Entity {
+        (**self).grid()
+    }
+
+    fn command(&self) -> Entity {
+        (**self).grid()
     }
 }
 
@@ -170,10 +195,21 @@ pub trait State: Debug + AsAny {
     /// A ui button was clicked
     fn on_button_clicked(
         &mut self,
-        _ctx: &mut dyn ApplicationContext,
-        _event_args: &ButtonType,
+        ctx: &mut dyn ApplicationContext,
+        event_args: &ButtonType,
     ) -> Transition {
-        Transition::DoNothing
+        self.on_cancelled(ctx);
+        match event_args {
+            ButtonType::Arc => Transition::ChangeState(Box::new(AddArcMode::default())),
+            ButtonType::Point => Transition::ChangeState(Box::new(AddPointMode::default())),
+            ButtonType::Line => Transition::ChangeState(Box::new(AddLineMode::default())),
+            ButtonType::Select => Transition::ChangeState(Box::new(Idle::default())),
+            ButtonType::Snap => Transition::DoNothing,
+        }
+    }
+
+    fn get_cursor(&self) -> &str {
+        "default"
     }
 }
 
@@ -196,6 +232,7 @@ pub enum Transition {
     DoNothing,
 }
 
+#[allow(dead_code)]
 impl Transition {
     /// Checks whether the transition will change to a particular [`State`].
     pub fn changes_to<S>(&self) -> bool
